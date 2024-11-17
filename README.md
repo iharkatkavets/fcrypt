@@ -31,7 +31,7 @@ All content except nonce is encrypted using XChaCha20 algorithm.
 ```
 **NON_ENCRYPTED_NONCE (24 bytes):**<br>
 •	Stores the 192-bit nonce.<br>
-•	The nonce is generated unique for every encryption operation with the same key. It’s non-sensitive and can safely be stored unencrypted.
+•	The nonce is uniquely generated for every encryption operation using the same key. It is non-sensitive and can be safely stored without encryption.
 
 **ENCRYPTED_PAD_SIZE (2 bytes):**<br>
 •	Contains the size of random padding bytes in the file, encrypted to hide potential file structure hints.<br>
