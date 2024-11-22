@@ -25,9 +25,14 @@ ls ./bin
 ### Encrypted file format
 XChaCha20 operates with a 256-bit key and a 192-bit nonce. It is safe to place the nonce at the beginning of the encrypted file. The hash of the key(password) is located after the padded bytes. 
 All content except nonce is encrypted using XChaCha20 algorithm.
-```text
-      24 bytes             2 bytes            PAD_SIZE bytes           32 bytes       
-[NON_ENCRYPTED_NONCE][ENCRYPTED_PAD_SIZE][ENCRYPTED_RANDOM_BYTES][ENCRYPTED_KEY_HASH][ENCRYPTED_FILE]
+```
++---------------+-----------+----------------+-----------+-----------+
+|   24 bytes    |  2 bytes  | PAD_SIZE bytes | 32 bytes  | ...       |
++---------------+-----------+----------------+-----------+-----------+
+| NON ENCRYPTED | RANDOM    |  ENCRYPTED     | ENCRYPTED | ENCRYPTED |
+| NONCE (IV)    | ENCRYPTED |  RANDOM BYTES  | KEY HASH  | FILE      |
+|               | PAD_SIZE  |                | (SHA256)  |           |
++---------------+-----------+----------------+-----------+-----------+
 ```
 **NON_ENCRYPTED_NONCE (24 bytes):**<br>
 •	Stores the 192-bit nonce.<br>
