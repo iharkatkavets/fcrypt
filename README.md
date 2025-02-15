@@ -45,26 +45,26 @@ All content except nonce is encrypted using XChaCha20 algorithm.
 +---------------+-----------+----------------+-----------+-----------+
 ```
 
-**NON_ENCRYPTED_NONCE (24 bytes):**
-• Stores the 192-bit nonce.
+**NON_ENCRYPTED_NONCE (24 bytes):**  
+• Stores the 192-bit nonce.  
 • The nonce is uniquely generated for every encryption operation using the same
 key. It is non-sensitive and can be safely stored without encryption.
 
-**ENCRYPTED_PAD_SIZE (2 bytes):**
+**ENCRYPTED_PAD_SIZE (2 bytes):**  
 • Contains the size of random padding bytes in the file, encrypted to hide
-potential file structure hints.
+potential file structure hints.  
 • 2 bytes (16 bits) allow for a maximum pad size of 65,535 bytes, which should
 be sufficient.
 
-**ENCRYPTED_RANDOM_BYTES (PAD_SIZE bytes):**
-• Random padding added to prevent file size inference attacks.
-• These bytes are encrypted to prevent exposing the padding length directly.
+**ENCRYPTED_RANDOM_BYTES (PAD_SIZE bytes):**  
+• Random padding added to prevent file size inference attacks.  
+• These bytes are encrypted to prevent exposing the padding length directly.  
 
-**ENCRYPTED_KEY_HASH (32 bytes):**
-• A 256-bit hash of the encryption key, encrypted with the key itself.
+**ENCRYPTED_KEY_HASH (32 bytes):**  
+• A 256-bit hash of the encryption key, encrypted with the key itself.  
 • This allows verification that the correct key is being used during decryption.
 
-**ENCRYPTED_FILE (FILE_SIZE bytes):**
+**ENCRYPTED_FILE (FILE_SIZE bytes):**  
 • The encrypted main payload.
 
 ## Inspirations and Contributions
