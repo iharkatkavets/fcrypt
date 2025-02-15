@@ -1,6 +1,5 @@
 /* main.c */
 
-#include "io_utils.h"
 #include "common_utils.h"
 #include <assert.h>
 #include <stddef.h>
@@ -11,7 +10,6 @@
 #include <sys/random.h>
 #include <errno.h>
 #include <unistd.h>
-#include "sha256.h"
 #include "core_utils.h"
 
 uint8_t *gen_secure_bytes(const size_t size) {
