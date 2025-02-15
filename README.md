@@ -18,6 +18,16 @@ At the moment it supports macOS only
 ./bin/sdec ~/Desktop/encrypted.file ~/Desktop/decrypted.file
 ```
 
+## Arguments and Parameters
+
+- **`-e`, `--encrypt`**  
+  Encrypts the input file. The password will be prompted  
+  _Example:_ `senc -e file.txt`
+
+- **`-d`, `--decrypt`**  
+  Decrypts the input file. The password will be prompted  
+  _Example:_ `senc -d file.txt`
+
 ## How to compile the project
 
 ```bash
