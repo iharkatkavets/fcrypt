@@ -16,6 +16,7 @@ At the moment it supports macOS only
 
 ```bash
 ./bin/senc -d encrypted.file -o decrypted.file
+./bin/senc -d encrypted.file
 ```
 
 ## Arguments and Parameters
@@ -26,17 +27,17 @@ At the moment it supports macOS only
 
 - **`-p <SIZE>`, `--padsize <SIZE>`**  
   The pad size. Must be in range [0,65535]. Taken random size if
-  not provided.
+  not provided.  
   _Example:_ `senc -e origin.file -p 12 -o encrypted.file`
 
 - **`-k <PASSWORD>`, `--key <PASSWORD>`**  
-  The password of len up 256 characters.
-  _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`
+  The password of len up 256 characters.  
+  _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`  
   _Example:_ `senc -d encrypted.file -k 'password'`
 
 - **`-o`, `--output <FILE>`**  
   The output file with encrypted content  
-  _Example:_ `senc -e origin.file -o encrypted.file`
+  _Example:_ `senc -e origin.file -o encrypted.file`  
   _Example:_ `senc -d encrypted.file -o origin.file`
 
 - **`-d`, `--decrypt`**  
@@ -44,11 +45,11 @@ At the moment it supports macOS only
   _Example:_ `senc -d encrypted.file`
 
 - **`-v`, `--verbose`**  
-  Add more output
+  Add more output  
   _Example:_ `senc -v -e origin.file -o encrypted.file`
 
 - **`-V`**  
-  Print version number and exit
+  Print version number and exit  
   _Example:_ `senc -v -e origin.file -o encrypted.file`
 
 - **`-h`, `--help`**  
