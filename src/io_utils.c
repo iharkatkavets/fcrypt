@@ -21,8 +21,8 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
     return -1;
   }
 
-  printf("%s", prompt);
-  fflush(stdout);
+  fprintf(stderr, "%s", prompt);
+  fflush(stderr);
 
   read_size = read(STDIN_FILENO, out_buf, out_buf_size);
   if (tcsetattr(fileno(stdin), TCSAFLUSH, &prev_params) != 0) {

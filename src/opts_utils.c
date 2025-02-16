@@ -17,9 +17,11 @@ void print_usage(const char *program_name) {
   printf("  -V                      Display the version number and exit.\n");
   printf("  -h, --help              Show this help message and exit.\n");
   printf("Examples:\n");
+  printf("  %s -e origin.file -o encrypted.file\n", program_name);
+  printf("  %s -e origin.file -o encrypted.file -k 'strong password'\n", program_name);
   printf("  %s -e origin.file > encrypted.file\n", program_name);
   printf("  %s -d encrypted.file\n", program_name);
-  printf("  %s -d encrypted.file\n", program_name);
+  printf("  %s -d encrypted.file -k 'strong password'\n", program_name);
   printf("\n");
   printf("Description:\n");
   printf("  A command-line tool for encrypting files using the XChaCha20 algorithm.\n");
