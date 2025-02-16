@@ -12,6 +12,7 @@
 #include "opts_utils.h"
 #include "file_utils.h"
 #include <stdint.h>
+#include <stdio.h>
 
 int decryptor(options opts) {
   int infd, outfd = STDOUT_FILENO;
@@ -64,6 +65,7 @@ int decryptor(options opts) {
       close_files(infd, outfd);
       return EXIT_FAILURE;
     }
+    printf("\n");
   }
 
   key_hash32 = sha256_data(key, keysize);

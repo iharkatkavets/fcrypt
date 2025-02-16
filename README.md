@@ -9,13 +9,13 @@ At the moment it supports macOS only
 ## How to encrypt the file
 
 ```bash
-./bin/senc ~/Desktop/input.file ~/Desktop/encrypted.file
+./bin/senc -e origin.file -o encrypted.file 
 ```
 
 ## How to decrypt the file
 
 ```bash
-./bin/sdec ~/Desktop/encrypted.file ~/Desktop/decrypted.file
+./bin/senc -d encrypted.file -o decrypted.file
 ```
 
 ## Arguments and Parameters
@@ -25,8 +25,14 @@ At the moment it supports macOS only
   _Example:_ `senc -e origin.file -o encrypted.file`
 
 - **`-p <SIZE>`, `--padsize <SIZE>`**  
-  The pad size. Must be in range [0,65535]
+  The pad size. Must be in range [0,65535]. Taken random size if
+  not provided.
   _Example:_ `senc -e origin.file -p 12 -o encrypted.file`
+
+- **`-k <PASSWORD>`, `--key <PASSWORD>`**  
+  The password of len up 256 characters.
+  _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`
+  _Example:_ `senc -d encrypted.file -k 'password'`
 
 - **`-o`, `--output <FILE>`**  
   The output file with encrypted content  
