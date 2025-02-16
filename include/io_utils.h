@@ -12,6 +12,6 @@
 #include <strings.h>
 #include <termios.h>
 
-uint8_t *read_input_safe(char*, size_t*);
+size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size);
 
 #endif

@@ -2,6 +2,7 @@
 
 #include "decryptor.h"
 #include "common_utils.h"
+#include "file_utils.h"
 #include "io_utils.h"
 #include "xchacha20.h"
 #include "sha256.h"
@@ -9,11 +10,13 @@
 #include "core_utils.h"
 #include "verbose.h"
 #include "opts_utils.h"
+#include "file_utils.h"
+#include <stdint.h>
 
 int decryptor(options opts) {
-  int infd, outfd;
+  int infd, outfd = STDOUT_FILENO;
   XChaCha_ctx ctx;
-  uint8_t *key;
+  uint8_t key[256];
   uint8_t *key_hash32;
   size_t keysize = 0;
   uint16_t padsize = 0;
@@ -32,18 +35,35 @@ int decryptor(options opts) {
     return -1;
   }
 
-  outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 00600);
-  if (outfd < 1) {
-    close(infd);
-    perror("Can't open for writing\n");
-    return -1;
+  if (opts.output_file) {
+    if (file_exist(opts.output_file)) {
+      fprintf(stderr, "Output file exists\n");
+      return EXIT_FAILURE;
+    }
+    else {
+      outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+      if (outfd < 0) {
+        close(infd);
+        perror("Can't open for writing\n");
+        return -1;
+      }
+    }
+  }
+  else {
+    outfd = STDOUT_FILENO;
   }
 
-  key = read_input_safe("Password: ", &keysize);
-  if (keysize == 0 || !key) {
-    fprintf(stderr, "Stop\n");
-    close_files(infd, outfd);
-    return -1;
+  if (opts.key) {
+    keysize = strlen(opts.key);
+    memcpy(key, opts.key, keysize);
+  }
+  else {
+    keysize = read_input_safe("Password: ", key, 256);
+    if (!keysize) {
+      fprintf(stderr, "The password is not provided. Stop\n");
+      close_files(infd, outfd);
+      return EXIT_FAILURE;
+    }
   }
 
   key_hash32 = sha256_data(key, keysize);
@@ -127,7 +147,6 @@ int decryptor(options opts) {
 
   free(nonce24_str);
   free(key_hash_str); free(key_hash32);
-  free(key);
   close_files(infd, outfd);
 
   return 0;

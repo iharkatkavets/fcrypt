@@ -1,7 +1,8 @@
 /* file_utils.c */
 
 #include "file_utils.h"
+#include <unistd.h>
 
 int file_exist(char *path) {
-  return 0;
+  return (access(path, F_OK) == 0);
 }

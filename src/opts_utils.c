@@ -12,6 +12,7 @@ void print_usage(const char *program_name) {
   printf("  -e, --encrypt <FILE>    Run Encrypt operation.\n");
   printf("  -p, --padsize <value>   Optional. Size of random bytes for padding. Generated randomly in range 0-65555 if not provided.\n");
   printf("  -o, --output <FILE>     Output file.\n");
+  printf("  -k, --key <PASSWORD>    The password for encrypt.\n");
   printf("  -v, --verbose           Enable verbose output.\n");
   printf("  -V                      Display the version number and exit.\n");
   printf("  -h, --help              Show this help message and exit.\n");
@@ -37,6 +38,7 @@ int parse_arguments(options *opts, int argc, char **argv) {
   struct option long_options[] = {
     {"padsize", required_argument, 0, 'p'}, 
     {"encrypt", required_argument, 0, 'e'},
+    {"key",     required_argument, 0, 'k'},
     {"decrypt", required_argument, 0, 'd'},
     {"output",  required_argument, 0, 'o'}, 
     {"verbose", no_argument,       0, 'v'},
@@ -44,7 +46,7 @@ int parse_arguments(options *opts, int argc, char **argv) {
     {0,         0,                 0,  0 }
   };
 
-  while ((option = getopt_long(argc, argv, "d:e:p:o:hvV", long_options, &option_index)) != -1) {
+  while ((option = getopt_long(argc, argv, "d:e:p:o:k:hvV", long_options, &option_index)) != -1) {
     switch (option) {
       case 'p':
         (*opts).padsize = atoi(optarg);
@@ -63,6 +65,9 @@ int parse_arguments(options *opts, int argc, char **argv) {
       case 'd':
         (*opts).decrypt = 1;
         (*opts).input_file = optarg;
+        break;
+      case 'k':
+        (*opts).key = optarg;
         break;
       case 'v':
         (*opts).verbose = 1;
