@@ -50,7 +50,7 @@ At the moment it supports macOS only
 
 - **`-V`**  
   Print version number and exit  
-  _Example:_ `senc -v -e origin.file -o encrypted.file`
+  _Example:_ `senc -V`
 
 - **`-h`, `--help`**  
   Print help  
