@@ -1,23 +1,39 @@
 /* main.c */
 
-#include "io_utils.h"
+#include "decryptor.h"
+#include "encryptor.h"
+#include "opts_utils.h"
 
-void print_usage(const char *program_name) {
-  printf("Usage: %s [-p <value> | --padsize <value>] [-h | --help] <input_file> <output_file>\n", program_name);
-  printf("Options:\n");
-  printf("  -p, --padsize <value>   Optional. Size of random bytes for padding. Generated randomly in range 0-65555 if not provided.\n");
-  printf("  -v, --verbose           Enable verbose output.\n");
-  printf("  -h                      Show this help message and exit.\n");
-  printf("Examples:\n");
-    printf("  %s -p 16 input.file encrypted.file\n", program_name);
-  printf("\n");
-    printf("Description:\n");
-    printf("  A command-line tool for encrypting files using the XChaCha20 algorithm.\n");
-    printf("  Provide an input file. Optional parameters\n");
-    printf("  include padding size and verbose mode for detailed logs.\n");
-}
+#include <stdlib.h>
+#include <stdio.h>
 
 int main(int argc, char *argv[]) {
-  print_usage(argv[0]);
-  return 0;
+  options opts = {0};
+  if (parse_arguments(&opts, argc, argv) == EXIT_FAILURE) {
+    fprintf(stderr, "Error: Wrong parameters\n");
+    print_usage(argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  if (opts.show_help) {
+    print_usage(argv[0]);
+    return EXIT_SUCCESS;
+  }
+
+  if (opts.show_version) {
+    print_version(argv[0]);
+    return EXIT_SUCCESS;
+  }
+
+  if (opts.decrypt) {
+    decryptor(opts);
+  }
+  else if (opts.encrypt) {
+    encryptor(opts);
+  }
+  else {
+    print_usage(argv[0]);
+  }
+
+  return EXIT_SUCCESS;
 }

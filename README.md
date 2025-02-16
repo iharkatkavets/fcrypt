@@ -20,13 +20,34 @@ At the moment it supports macOS only
 
 ## Arguments and Parameters
 
-- **`-e`, `--encrypt`**  
+- **`-e <FILE>`, `--encrypt <FILE>`**  
   Encrypts the input file. The password will be prompted  
-  _Example:_ `senc -e file.txt`
+  _Example:_ `senc -e origin.file -o encrypted.file`
+
+- **`-p <SIZE>`, `--padsize <SIZE>`**  
+  The pad size. Must be in range [0,65535]
+  _Example:_ `senc -e origin.file -p 12 -o encrypted.file`
+
+- **`-o`, `--output <FILE>`**  
+  The output file with encrypted content  
+  _Example:_ `senc -e origin.file -o encrypted.file`
+  _Example:_ `senc -d encrypted.file -o origin.file`
 
 - **`-d`, `--decrypt`**  
   Decrypts the input file. The password will be prompted  
-  _Example:_ `senc -d file.txt`
+  _Example:_ `senc -d encrypted.file`
+
+- **`-v`, `--verbose`**  
+  Add more output
+  _Example:_ `senc -v -e origin.file -o encrypted.file`
+
+- **`-V`**  
+  Print version number and exit
+  _Example:_ `senc -v -e origin.file -o encrypted.file`
+
+- **`-h`, `--help`**  
+  Print help  
+  _Example:_ `senc -h`
 
 ## How to compile the project
 

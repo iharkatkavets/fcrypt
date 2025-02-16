@@ -1,5 +1,6 @@
 /* encryptor.c */
 
+#include "encryptor.h"
 #include "common_utils.h"
 #include "io_utils.h"
 #include "xchacha20.h"
@@ -12,24 +13,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "opts_utils.h"
 
-void print_usage(const char *program_name) {
-  printf("Usage: %s [-p <value> | --padsize <value>] [-h | --help] <input_file> <output_file>\n", program_name);
-  printf("Options:\n");
-  printf("  -p, --padsize <value>   Optional. Size of random bytes for padding. Generated randomly in range 0-65555 if not provided.\n");
-  printf("  -v, --verbose           Enable verbose output.\n");
-  printf("  -h                      Show this help message and exit.\n");
-  printf("Examples:\n");
-    printf("  %s -p 16 input.file encrypted.file\n", program_name);
-  printf("\n");
-    printf("Description:\n");
-    printf("  A command-line tool for encrypting files using the XChaCha20 algorithm.\n");
-    printf("  Provide an input file. Optional parameters\n");
-    printf("  include padding size and verbose mode for detailed logs.\n");
-}
-
-int main(int argc, char *argv[]) {
-  char *infile, *outfile;
+int encryptor(options opts) {
   int infd, outfd;
   XChaCha_ctx ctx;
   uint8_t *key;
@@ -45,56 +31,17 @@ int main(int argc, char *argv[]) {
   uint8_t dec_buf[4096];
   uint8_t *pad_buf;
   ssize_t read_size = 0;
-  int option_index = 0;
-  int option;
 
-  struct option long_options[] = {
-    {"padsize", required_argument, 0, 'p'}, 
-    {"verbose", no_argument, 0, 'v'},
-    {"help", no_argument, 0, 'h'},
-    {0, 0, 0, 0}
-  };
-
-  while ((option = getopt_long(argc, argv, "p:vh", long_options, &option_index)) != -1) {
-    switch (option) {
-      case 'p':
-        padsize = atoi(optarg);
-        if (padsize < 0 || padsize > 65535) {
-          fprintf(stderr, "Invalid pad size. Must be in range [0, 65535].\n");
-          return EXIT_FAILURE;
-        }
-        break;
-      case 'v':
-        verbose = 1;
-        break;
-      case 'h':
-        print_usage(argv[0]);
-        return EXIT_SUCCESS;
-      case '?':
-      default:
-        print_usage(argv[0]);
-        return EXIT_FAILURE;
-    }
-  }
-
-  if (optind+2 > argc) {
-    print_usage(argv[0]);
-    return EXIT_FAILURE;
-  }
-
-  infile = argv[optind];
-  outfile = argv[optind+1];
-
-  infd = open(infile, O_RDONLY);
+  infd = open(opts.input_file, O_RDONLY);
   if (infd < 1) {
-    fprintf(stderr, "Can't open %s for reading\n", infile);
+    fprintf(stderr, "Can't open %s for reading\n", opts.input_file);
     return EXIT_FAILURE;
   }
 
-  outfd = open(outfile, O_WRONLY|O_CREAT|O_TRUNC, 00600);
+  outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 00600);
   if (outfd < 1) {
     close(infd);
-    fprintf(stderr, "Can't open %s for writing\n", outfile);
+    fprintf(stderr, "Can't open %s for writing\n", opts.output_file);
     return EXIT_FAILURE;
   }
 
@@ -119,7 +66,7 @@ int main(int argc, char *argv[]) {
   vlog("nonce24: %s\n", nonce24_str);
 
   if ((write_to_file(outfd, nonce24, 24)) != 24) {
-    fprintf(stderr, "Failed to write to %s:%d\n", outfile, __LINE__);
+    fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
     close_files(infd, outfd);
     return EXIT_FAILURE;
   }
@@ -136,7 +83,7 @@ int main(int argc, char *argv[]) {
   xchacha_encrypt_bytes(&ctx, (uint8_t*)&padsize, enc_buf, 2);
 
   if ((write_to_file(outfd, enc_buf, 2)) != 2) {
-    fprintf(stderr, "Failed to write to %s:%d\n", outfile, __LINE__);
+    fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
     close_files(infd, outfd);
     return EXIT_FAILURE;
   }
@@ -144,13 +91,13 @@ int main(int argc, char *argv[]) {
   while (padsize > 0) {
     chunk = MIN((size_t)padsize, sizeof(enc_buf));
     if (!(pad_buf = gen_secure_bytes(chunk))) {
-      fprintf(stderr, "Failed to generate secure bytes %s:%d\n", outfile, __LINE__);
+      fprintf(stderr, "Failed to generate secure bytes %s:%d\n", opts.output_file, __LINE__);
       close_files(infd, outfd);
       return EXIT_FAILURE;
     }
     xchacha_encrypt_bytes(&ctx, pad_buf, enc_buf, chunk);
     if ((write_to_file(outfd, enc_buf, chunk)) != chunk) {
-      fprintf(stderr, "Failed to write to %s:%d\n", outfile, __LINE__);
+      fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
       close_files(infd, outfd);
       return EXIT_FAILURE;
     }
@@ -160,7 +107,7 @@ int main(int argc, char *argv[]) {
 
   xchacha_encrypt_bytes(&ctx, key_hash32, enc_buf, 32);
   if ((write_to_file(outfd, enc_buf, 32)) != 32) {
-    fprintf(stderr, "Failed to write to %s:%d\n", outfile, __LINE__);
+    fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
     close_files(infd, outfd);
     return EXIT_FAILURE;
   }
@@ -177,7 +124,7 @@ int main(int argc, char *argv[]) {
     }
     xchacha_encrypt_bytes(&ctx, dec_buf, enc_buf, read_size);
     if ((write_to_file(outfd, enc_buf, read_size)) != read_size) {
-      fprintf(stderr, "Failed to write to %s:%d\n", outfile, __LINE__);
+      fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
       close_files(infd, outfd);
       return EXIT_FAILURE;
     }
