@@ -11,8 +11,11 @@
 #include "verbose.h"
 #include "opts_utils.h"
 #include "file_utils.h"
+
 #include <stdint.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <stdbool.h>
 
 int decryptor(options opts) {
   int infd, outfd = STDOUT_FILENO;

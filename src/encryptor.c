@@ -9,13 +9,17 @@
 #include "convert_utils.h"
 #include "core_utils.h"
 #include "verbose.h"
+#include "opts_utils.h"
+#include "gen_utils.h"
+
 #include <getopt.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "opts_utils.h"
+#include <fcntl.h>
+#include <stdbool.h>
 
 int encryptor(options opts) {
   int infd, outfd;

@@ -26,14 +26,12 @@ int main(int argc, char *argv[]) {
   }
 
   if (opts.decrypt) {
-    decryptor(opts);
+    return decryptor(opts);
   }
   else if (opts.encrypt) {
-    encryptor(opts);
-  }
-  else {
-    print_usage(argv[0]);
+    return encryptor(opts);
   }
 
+  print_usage(argv[0]);
   return EXIT_SUCCESS;
 }
