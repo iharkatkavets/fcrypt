@@ -1,33 +1,26 @@
 /* decryptor.c */
 
+#include "decryptor.h"
 #include "common_utils.h"
+#include "file_utils.h"
 #include "io_utils.h"
 #include "xchacha20.h"
 #include "sha256.h"
 #include "convert_utils.h"
 #include "core_utils.h"
 #include "verbose.h"
-#include <getopt.h>
+#include "opts_utils.h"
+#include "file_utils.h"
 
-void print_usage(const char *program_name) {
-  printf("Usage: %s [-h | --help] [-v | --verbose] <input_file> <output_file>\n", program_name);
-  printf("Options:\n");
-  printf("  -v, --verbose           Enable verbose output.\n");
-  printf("  -h                      Show this help message and exit.\n");
-  printf("Examples:\n");
-    printf("  %s encrypted.file decrypted.file\n", program_name);
-  printf("\n");
-    printf("Description:\n");
-    printf("  A command-line tool for decrypting files using the XChaCha20 algorithm.\n");
-    printf("  Provide an input file. Optional parameters\n");
-    printf("  include verbose mode for detailed logs.\n");
-}
+#include <stdint.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdbool.h>
 
-int main(int argc, char *argv[]) {
-  char *infile, *outfile;
-  int infd, outfd;
+int decryptor(options opts) {
+  int infd, outfd = STDOUT_FILENO;
   XChaCha_ctx ctx;
-  uint8_t *key;
+  uint8_t key[256];
   uint8_t *key_hash32;
   size_t keysize = 0;
   uint16_t padsize = 0;
@@ -39,57 +32,43 @@ int main(int argc, char *argv[]) {
   uint8_t dec_buf[4096];
   ssize_t chunk = 0;
   ssize_t read_size = 0;
-  int option_index = 0;
-  int option;
 
-  struct option long_options[] = {
-    {"help", no_argument, 0, 'h'},
-    {"verbose", no_argument, 0, 'v'},
-    {0, 0, 0, 0}
-  };
-
-  while ((option = getopt_long(argc, argv, "vh", long_options, &option_index)) != -1) {
-    switch (option) {
-      case 'v':
-        verbose = 1;
-        break;
-      case 'h':
-        print_usage(argv[0]);
-        return EXIT_SUCCESS;
-      case '?':
-      default:
-        print_usage(argv[0]);
-        return EXIT_FAILURE;
-    }
-  }
-
-  if (optind+2 > argc) {
-    fprintf(stderr, "Error: Missing required arguments <input_file> and <output_file>.\n");
-    print_usage(argv[0]);
-    return EXIT_FAILURE;
-  }
-
-  infile = argv[optind];
-  outfile = argv[optind+1];
-
-  infd = open(infile, O_RDONLY);
+  infd = open(opts.input_file, O_RDONLY);
   if (infd < 1) {
     perror("Can't open for reading\n");
     return -1;
   }
 
-  outfd = open(outfile, O_WRONLY|O_CREAT|O_TRUNC, 00600);
-  if (outfd < 1) {
-    close(infd);
-    perror("Can't open for writing\n");
-    return -1;
+  if (opts.output_file) {
+    if (file_exist(opts.output_file)) {
+      fprintf(stderr, "Output file exists\n");
+      return EXIT_FAILURE;
+    }
+    else {
+      outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+      if (outfd < 0) {
+        close(infd);
+        perror("Can't open for writing\n");
+        return -1;
+      }
+    }
+  }
+  else {
+    outfd = STDOUT_FILENO;
   }
 
-  key = read_input_safe("Password: ", &keysize);
-  if (keysize == 0 || !key) {
-    fprintf(stderr, "Stop\n");
-    close_files(infd, outfd);
-    return -1;
+  if (opts.key) {
+    keysize = strlen(opts.key);
+    memcpy(key, opts.key, keysize);
+  }
+  else {
+    keysize = read_input_safe("Password: ", key, 256);
+    if (!keysize) {
+      fprintf(stderr, "The password is not provided. Stop\n");
+      close_files(infd, outfd);
+      return EXIT_FAILURE;
+    }
+    printf("\n");
   }
 
   key_hash32 = sha256_data(key, keysize);
@@ -165,7 +144,7 @@ int main(int argc, char *argv[]) {
     }
     xchacha_decrypt_bytes(&ctx, enc_buf, dec_buf, read_size);
     if ((write_to_file(outfd, dec_buf, read_size)) != read_size) {
-      fprintf(stderr, "Failed to write to %s:%d\n", outfile, __LINE__);
+      fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
       close_files(infd, outfd);
       return -1;
     }
@@ -173,7 +152,6 @@ int main(int argc, char *argv[]) {
 
   free(nonce24_str);
   free(key_hash_str); free(key_hash32);
-  free(key);
   close_files(infd, outfd);
 
   return 0;

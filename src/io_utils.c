@@ -1,16 +1,16 @@
 /* io_utils.c */
 
 #include "io_utils.h"
+#include <stddef.h>
+#include <stdint.h>
 
-uint8_t* read_input_safe(char *prompt, size_t *out_size) {
-  char in_buf[256];
-  uint8_t *out_buf;
-  size_t in_size;
+size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
+  size_t read_size;
   struct termios prev_params, new_params;
 
   if (tcgetattr(fileno(stdin), &prev_params) != 0) {
     fprintf(stderr, "Fail to read termious state: %s\n", strerror(errno));
-    return NULL;
+    return -1;
   }
 
   new_params = prev_params;
@@ -18,36 +18,35 @@ uint8_t* read_input_safe(char *prompt, size_t *out_size) {
 
   if (tcsetattr(fileno(stdin), TCSAFLUSH, &new_params) != 0) {
     fprintf(stderr, "Fail to turn off echo: %s\n", strerror(errno));
-    return NULL;
+    return -1;
   }
 
-  printf("%s", prompt);
-  fflush(stdout);
+  fprintf(stderr, "%s", prompt);
+  fflush(stderr);
 
-  in_size = read(STDIN_FILENO, in_buf, sizeof(in_buf));
-  if (in_size < 0) {
-    fprintf(stderr, "Failed to read key: %s\n", strerror(errno));
-    return NULL;
+  read_size = read(STDIN_FILENO, out_buf, out_buf_size);
+  if (tcsetattr(fileno(stdin), TCSAFLUSH, &prev_params) != 0) {
+    fprintf(stderr, "Failed to restore terminal settings: %s\n", strerror(errno));
   }
 
-  if (in_buf[in_size-1] == '\n') {
-    in_size--;
+  if (read_size < 0) {
+    fprintf(stderr, "Failed to read input: %s\n", strerror(errno));
+    return -1;
   }
 
-  if (in_size < 1) {
+  if (read_size == 0) {
+    fprintf(stderr, "No input provided.\n");
+    return -1;
+  }
+
+  if (out_buf[read_size-1] == '\n') {
+    read_size--;
+  }
+
+  if (read_size < 1) {
     fprintf(stderr, "No key provided\n");
-    return NULL;
+    return -1;
   }
 
-  if (!(out_buf = (uint8_t *)malloc(in_size))) {
-    fprintf(stderr, "Memory allocation failed\n");
-    return NULL;
-  }
-
-  memcpy(out_buf, in_buf, in_size);
-
-  tcsetattr(fileno(stdin), TCSAFLUSH, &prev_params);
-
-  *out_size = in_size;
-  return out_buf;
+  return read_size;
 }

@@ -1,20 +1,63 @@
 # Secure Encryptor
+
 A command-line tool for encrypting and decrypting files using the XChaCha20 algorithm.
 
-### Supported platforms
+## Supported platforms
+
 At the moment it supports macOS only
 
-### How to encrypt the file
+## How to encrypt the file
+
 ```bash
-./bin/senc ~/Desktop/input.file ~/Desktop/encrypted.file
+./bin/senc -e origin.file -o encrypted.file 
 ```
 
-### How to decrypt the file
+## How to decrypt the file
+
 ```bash
-./bin/sdec ~/Desktop/encrypted.file ~/Desktop/decrypted.file
+./bin/senc -d encrypted.file -o decrypted.file
+./bin/senc -d encrypted.file
 ```
 
-### How to compile the project
+## Arguments and Parameters
+
+- **`-e <FILE>`, `--encrypt <FILE>`**  
+  Encrypts the input file. The password will be prompted  
+  _Example:_ `senc -e origin.file -o encrypted.file`
+
+- **`-p <SIZE>`, `--padsize <SIZE>`**  
+  The pad size. Must be in range [0,65535]. Taken random size if
+  not provided.  
+  _Example:_ `senc -e origin.file -p 12 -o encrypted.file`
+
+- **`-k <PASSWORD>`, `--key <PASSWORD>`**  
+  The password of len up 256 characters.  
+  _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`  
+  _Example:_ `senc -d encrypted.file -k 'password'`
+
+- **`-o`, `--output <FILE>`**  
+  The output file with encrypted content  
+  _Example:_ `senc -e origin.file -o encrypted.file`  
+  _Example:_ `senc -d encrypted.file -o origin.file`
+
+- **`-d`, `--decrypt`**  
+  Decrypts the input file. The password will be prompted  
+  _Example:_ `senc -d encrypted.file`
+
+- **`-v`, `--verbose`**  
+  Add more output  
+  _Example:_ `senc -v -e origin.file -o encrypted.file`
+
+- **`-V`**  
+  Print version number and exit  
+  _Example:_ `senc -V`
+
+- **`-h`, `--help`**  
+  Print help  
+  _Example:_ `senc -h`
+
+## How to compile the project
+
 ```bash
 git clone https://github.com/iharkatkavets/secure-encryptor.git && cd secure-encryptor
 make all
@@ -22,10 +65,14 @@ make all
 ls ./bin
 ```
 
-### Encrypted file format
-XChaCha20 operates with a 256-bit key and a 192-bit nonce. It is safe to place the nonce at the beginning of the encrypted file. The hash of the key(password) is located after the padded bytes. 
+## Encrypted file format
+
+XChaCha20 operates with a 256-bit key and a 192-bit nonce. It is safe to place
+the nonce at the beginning of the encrypted file. The hash of the key(password)
+is located after the padded bytes.
 All content except nonce is encrypted using XChaCha20 algorithm.
-```
+
+```txt
                       ↓ ENCRYPTED FILE FORMAT ↓                      
 +---------------+-----------+----------------+-----------+-----------+
 |   24 bytes    |  2 bytes  | PAD_SIZE bytes | 32 bytes  | ...       |
@@ -35,34 +82,46 @@ All content except nonce is encrypted using XChaCha20 algorithm.
 |               | PAD_SIZE  |  BYTES         | (SHA256)  |           |
 +---------------+-----------+----------------+-----------+-----------+
 ```
-**NON_ENCRYPTED_NONCE (24 bytes):**<br>
-•	Stores the 192-bit nonce.<br>
-•	The nonce is uniquely generated for every encryption operation using the same key. It is non-sensitive and can be safely stored without encryption.
 
-**ENCRYPTED_PAD_SIZE (2 bytes):**<br>
-•	Contains the size of random padding bytes in the file, encrypted to hide potential file structure hints.<br>
-•	2 bytes (16 bits) allow for a maximum pad size of 65,535 bytes, which should be sufficient.
+**NON_ENCRYPTED_NONCE (24 bytes):**  
+• Stores the 192-bit nonce.  
+• The nonce is uniquely generated for every encryption operation using the same
+key. It is non-sensitive and can be safely stored without encryption.
 
-**ENCRYPTED_RANDOM_BYTES (PAD_SIZE bytes):**<br>
-•	Random padding added to prevent file size inference attacks.<br>
-•	These bytes are encrypted to prevent exposing the padding length directly.
+**ENCRYPTED_PAD_SIZE (2 bytes):**  
+• Contains the size of random padding bytes in the file, encrypted to hide
+potential file structure hints.  
+• 2 bytes (16 bits) allow for a maximum pad size of 65,535 bytes, which should
+be sufficient.
 
-**ENCRYPTED_KEY_HASH (32 bytes):**<br>
-•	A 256-bit hash of the encryption key, encrypted with the key itself.<br>
-•	This allows verification that the correct key is being used during decryption.
+**ENCRYPTED_RANDOM_BYTES (PAD_SIZE bytes):**  
+• Random padding added to prevent file size inference attacks.  
+• These bytes are encrypted to prevent exposing the padding length directly.  
 
-**ENCRYPTED_FILE (FILE_SIZE bytes):**<br>
-•	The encrypted main payload.
+**ENCRYPTED_KEY_HASH (32 bytes):**  
+• A 256-bit hash of the encryption key, encrypted with the key itself.  
+• This allows verification that the correct key is being used during decryption.
 
-# Inspirations and Contributions
-This project draws inspiration from the video lectures of [Dr. Jonas Birch](https://www.linkedin.com/in/jonasbirch/). The concept for the encrypted file format adapts ideas presented in those lectures.
+**ENCRYPTED_FILE (FILE_SIZE bytes):**  
+• The encrypted main payload.
 
-Additionally, sources from the repository [vitorstraggiotti/easySHA256](https://github.com/vitorstraggiotti/easySHA256) were utilized to implement SHA256.
+## Inspirations and Contributions
 
-And sources from the repository [spcnvdr/xchacha20](https://github.com/spcnvdr/xchacha20) were utilized to implement XChaCha20.
+This project draws inspiration from the video lectures of [Dr. Jonas
+Birch](https://www.linkedin.com/in/jonasbirch/). The concept for the encrypted
+file format adapts ideas presented in those lectures.
 
-# License
-```
+Additionally, sources from the repository
+[vitorstraggiotti/easySHA256](https://github.com/vitorstraggiotti/easySHA256)
+were utilized to implement SHA256.
+
+And sources from the repository
+[spcnvdr/xchacha20](https://github.com/spcnvdr/xchacha20) were utilized to
+implement XChaCha20.
+
+## License
+
+```txt
 MIT License
 
 Copyright (c) 2024 Ihar Katkavets
@@ -85,8 +144,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
-This project also includes code from [spcnvdr/xchacha20](https://github.com/spcnvdr/xchacha20) by Bryan Hawkins, licensed under the BSD-3-Clause License:
-```
+
+This project also includes code from
+[spcnvdr/xchacha20](https://github.com/spcnvdr/xchacha20) by Bryan Hawkins,
+licensed under the BSD-3-Clause License:
+
+```txt
 Copyright 2019 Bryan Hawkins <spcnvdrr@protonmail.com>
 
 Redistribution and use in source and binary forms, with or without
