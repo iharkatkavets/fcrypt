@@ -3,6 +3,10 @@
 #include "io_utils.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <termios.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
 
 size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   size_t read_size;
@@ -29,7 +33,7 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
     fprintf(stderr, "Failed to restore terminal settings: %s\n", strerror(errno));
   }
 
-  if (read_size < 0) {
+  if (read_size < 1) {
     fprintf(stderr, "Failed to read input: %s\n", strerror(errno));
     return -1;
   }

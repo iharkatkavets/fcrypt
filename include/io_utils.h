@@ -5,12 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <errno.h>
-#include <strings.h>
-#include <termios.h>
+#include <stdint.h>
 
 size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size);
 

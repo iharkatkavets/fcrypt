@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 char* uint8_to_hex(uint8_t *in_buf, size_t buf_size) {
   char *out_buf;

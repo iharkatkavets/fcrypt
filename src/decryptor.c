@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <string.h>
 
 int decryptor(options opts) {
   int infd, outfd = STDOUT_FILENO;

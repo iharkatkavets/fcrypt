@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 int write_to_file(int outfd, uint8_t *buf, ssize_t to_write);
 void close_files(int infd, int outfd);
