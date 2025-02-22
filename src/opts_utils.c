@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 void print_usage(const char *program_name) {
-  printf("Usage: %s [-e <FILE> | --encrypt <FILE>] [-d <FILE> | --decrypt <FILE>] [-p <value> | --padsize <value>] [-o | --output <FILE>] [-h | --help]\n", program_name);
+  printf("Usage: %s [-e <FILE> | --encrypt <FILE>] [-d <FILE> | --decrypt <FILE>] [-p <PASSWORD> | --password <PASSWORD>] [-l <PADSIZE> | --length <PADSIZE>] [-o | --output <FILE>] [-h | --help]\n", program_name);
   printf("Options:\n");
   printf("  -d, --decrypt <FILE>        Run Decrypt operation.\n");
   printf("  -e, --encrypt <FILE>        Run Encrypt operation.\n");
@@ -18,10 +18,10 @@ void print_usage(const char *program_name) {
   printf("  -h, --help                  Show this help message and exit.\n");
   printf("Examples:\n");
   printf("  %s -e origin.file -o encrypted.file\n", program_name);
-  printf("  %s -e origin.file -o encrypted.file -p 'strong password'\n", program_name);
+  printf("  %s -e origin.file -o encrypted.file -p 'password'\n", program_name);
   printf("  %s -e origin.file > encrypted.file\n", program_name);
   printf("  %s -d encrypted.file\n", program_name);
-  printf("  %s -d encrypted.file -p 'strong password'\n", program_name);
+  printf("  %s -d encrypted.file -p 'password'\n", program_name);
   printf("\n");
   printf("Description:\n");
   printf("  A command-line tool for encrypting files using the XChaCha20 algorithm.\n");
