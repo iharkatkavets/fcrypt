@@ -25,12 +25,12 @@ At the moment it supports macOS only
   Encrypts the input file. The password will be prompted  
   _Example:_ `senc -e origin.file -o encrypted.file`
 
-- **`-p <SIZE>`, `--padsize <SIZE>`**  
+- **`-l <SIZE>`, `--length <SIZE>`**  
   The pad size. Must be in range [0,65535]. Taken random size if
   not provided.  
-  _Example:_ `senc -e origin.file -p 12 -o encrypted.file`
+  _Example:_ `senc -e origin.file -l 16 -o encrypted.file`
 
-- **`-k <PASSWORD>`, `--key <PASSWORD>`**  
+- **`-p <PASSWORD>`, `--password <PASSWORD>`**  
   The password of len up 256 characters.  
   _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`  
   _Example:_ `senc -d encrypted.file -k 'password'`
