@@ -11,7 +11,7 @@ typedef struct {
     int decrypt;
     char *input_file;
     char *output_file;
-    char *key;
+    char *password;
     int show_help;
     int show_version;
     int verbose;

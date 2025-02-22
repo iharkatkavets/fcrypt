@@ -15,50 +15,32 @@
 #include <termios.h>
 #include <stdbool.h>
 
-uint8_t *gen_secure_bytes(const size_t size) {
-  uint8_t *buf, *p;
+size_t gen_secure_bytes(uint8_t *buf, const size_t size) {
+  uint8_t *p;
   size_t remain = size;
 
-  if (size == 0) {
-    return NULL;
-  }
-
-  if (!(buf = (uint8_t *)malloc(size))) {
-    return NULL;
-  }
-
   p = buf;
-
   while (remain) {
     size_t chunk = MIN(remain, (size_t)256);
     if (getentropy(p, chunk)<0) {
-      fprintf(stderr, "Failed to generate random data");
-      free(buf);
-      return NULL;
+      perror("\nFailed to generate random data");
+      return remain;
     }
     p += chunk;
     remain -= chunk;
   }
 
-  return buf;
+  return remain;
 }
 
-uint16_t gen_uint16() {
-  uint8_t *padsize_buf;
-  uint16_t padsize = 0;
+size_t gen_uint16(uint16_t *result) {
+  uint8_t padsize_buf[2];
 
-  if (!(padsize_buf = gen_secure_bytes(2))) {
-    fprintf(stderr, "Failed to generate padsize");
-    return 0;
+  if (gen_secure_bytes(padsize_buf, 2)) {
+    return EXIT_FAILURE;
   }
 
-  padsize = ((uint16_t)padsize_buf[0] << 8) | padsize_buf[1];
-  free(padsize_buf);
-  return padsize;
+  *result = (uint16_t)((padsize_buf[0] << 8) | padsize_buf[1]);
+  return 0;
 }
 
-uint8_t *gen_nonce(size_t size) {
-  uint8_t *buf;
-  buf = gen_secure_bytes(size);
-  return buf;
-}

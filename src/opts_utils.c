@@ -36,6 +36,7 @@ void print_version(const char *program_name) {
 int parse_arguments(options *opts, int argc, char **argv) {
   int option = -1;
   int option_index = 0;
+  int padsize = -1;
 
   struct option long_options[] = {
     {"padsize", required_argument, 0, 'p'}, 
@@ -51,44 +52,44 @@ int parse_arguments(options *opts, int argc, char **argv) {
   while ((option = getopt_long(argc, argv, "d:e:p:o:k:hvV", long_options, &option_index)) != -1) {
     switch (option) {
       case 'p':
-        (*opts).padsize = atoi(optarg);
-        if ((*opts).padsize < 0 || (*opts).padsize > 65535) {
+        padsize = atoi(optarg);
+        if (padsize < 0 || padsize > 65535) {
           fprintf(stderr, "Invalid pad size. Must be in range [0, 65535].\n");
           return EXIT_FAILURE;
         }
         break;
       case 'e':
-        (*opts).encrypt = 1;
-        (*opts).input_file = optarg;
+        opts->encrypt = 1;
+        opts->input_file = optarg;
         break;
       case 'o':
-        (*opts).output_file = optarg;
+        opts->output_file = optarg;
         break;
       case 'd':
-        (*opts).decrypt = 1;
-        (*opts).input_file = optarg;
+        opts->decrypt = 1;
+        opts->input_file = optarg;
         break;
       case 'k':
-        (*opts).key = optarg;
+        opts->password = optarg;
         break;
       case 'v':
-        (*opts).verbose = 1;
+        opts->verbose = 1;
         break;
       case 'V':
-        (*opts).show_version = 1;
+        opts->show_version = 1;
         break;
       case 'h':
-        (*opts).show_help = 1;
-        return EXIT_SUCCESS;
+        opts->show_help = 1;
       case '?':
       default:
         return EXIT_FAILURE;
     }
   }
 
-  if ((*opts).encrypt && (*opts).decrypt) {
+  if (opts->encrypt && opts->decrypt) {
     return EXIT_FAILURE;
   }
+  opts->padsize = padsize;
 
   return EXIT_SUCCESS;
 }

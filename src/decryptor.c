@@ -2,15 +2,11 @@
 
 #include "decryptor.h"
 #include "common_utils.h"
-#include "file_utils.h"
-#include "io_utils.h"
 #include "xchacha20.h"
-#include "sha256.h"
 #include "convert_utils.h"
 #include "core_utils.h"
 #include "verbose.h"
 #include "opts_utils.h"
-#include "file_utils.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -19,97 +15,46 @@
 #include <unistd.h>
 #include <string.h>
 
-int decryptor(options opts) {
-  int infd, outfd = STDOUT_FILENO;
+int perform_decryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
   XChaCha_ctx ctx;
-  uint8_t key[256];
-  uint8_t *key_hash32;
-  size_t keysize = 0;
   uint16_t padsize = 0;
-  char *key_hash_str;
   uint8_t nonce24[24];
-  char *nonce24_str;
+  char nonce24_str[24*2+1];
   uint8_t counter[8] = {0x1};
   uint8_t enc_buf[4096];
   uint8_t dec_buf[4096];
   ssize_t chunk = 0;
   ssize_t read_size = 0;
 
-  infd = open(opts.input_file, O_RDONLY);
-  if (infd < 1) {
-    perror("Can't open for reading\n");
-    return -1;
-  }
-
-  if (opts.output_file) {
-    if (file_exist(opts.output_file)) {
-      fprintf(stderr, "Output file exists\n");
-      return EXIT_FAILURE;
-    }
-    else {
-      outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 0600);
-      if (outfd < 0) {
-        close(infd);
-        perror("Can't open for writing\n");
-        return -1;
-      }
-    }
-  }
-  else {
-    outfd = STDOUT_FILENO;
-  }
-
-  if (opts.key) {
-    keysize = strlen(opts.key);
-    memcpy(key, opts.key, keysize);
-  }
-  else {
-    keysize = read_input_safe("Password: ", key, 256);
-    if (!keysize) {
-      fprintf(stderr, "The password is not provided. Stop\n");
-      close_files(infd, outfd);
-      return EXIT_FAILURE;
-    }
-    printf("\n");
-  }
-
-  key_hash32 = sha256_data(key, keysize);
-  key_hash_str = uint8_to_hex(key_hash32, 32);
-  vlog("\nsha256(key): %s\n", key_hash_str);
-
   if (read(infd, nonce24, 24) != 24) {
-    fprintf(stderr, "Cant' read 24 bytes for nonce. Stop\n");
-    close_files(infd, outfd);
-    return -1;
+    fprintf(stderr, "\nWrong input file. Can't read 24 bytes of nonce.");
+    return EXIT_FAILURE;
   }
 
-  nonce24_str = uint8_to_hex(nonce24, 24);
-  vlog("nonce24: %s\n", nonce24_str);
+  uint8_to_hex(nonce24_str, nonce24, 24);
+  vlog("\nNonce[24]: %s", nonce24_str);
 
   xchacha_keysetup(&ctx, key_hash32, nonce24);
   xchacha_set_counter(&ctx, counter);
 
   if (read(infd, enc_buf, 2) != 2) {
-    perror("Cant' read 2 bytes for padsize. Stop\n");
-    close_files(infd, outfd);
-    return -1;
+    fprintf(stderr, "\nCan't read 2 bytes of padsize.");
+    return EXIT_FAILURE;
   }
 
   xchacha_decrypt_bytes(&ctx, enc_buf, (uint8_t*)&padsize, 2);
-  vlog("Padsize: %u", padsize);
+  vlog("\nPadsize: %u", padsize);
 
   while (padsize > 0) {
     chunk = MIN(padsize, sizeof(enc_buf));
     read_size = read(infd, enc_buf, chunk);
     if (read_size < 0) {
-      perror("Can't read file\n");
-      close_files(infd, outfd);
-      return -1;
+      fprintf(stderr, "\nCan't read file.");
+      return EXIT_FAILURE;
     }
     if (read_size != chunk) {
-      fprintf(stderr, "Wrong file or password.");
-      close_files(infd, outfd);
-      return -1;
+      fprintf(stderr, "\nWrong file or password.");
+      return EXIT_FAILURE;
     }
     xchacha_decrypt_bytes(&ctx, enc_buf, dec_buf, chunk);
     padsize -= chunk;
@@ -117,44 +62,79 @@ int decryptor(options opts) {
 
   read_size = read(infd, enc_buf, 32);
   if (read_size < 0) {
-    perror("Can't read file\n");
-    close_files(infd, outfd);
-    return -1;
+    fprintf(stderr, "\nCan't read file.");
+    return EXIT_FAILURE;
   }
   if (read_size != 32) {
-    fprintf(stderr, "Wrong file or password.");
-    close_files(infd, outfd);
-    return -1;
+    fprintf(stderr, "\nWrong file or password.");
+    return EXIT_FAILURE;
   }
 
   xchacha_decrypt_bytes(&ctx, enc_buf, dec_buf, 32);
   if (memcmp(dec_buf, key_hash32, 32) != 0) {
-    close_files(infd, outfd);
-    fprintf(stderr, "Wrong password.");
-    return -1;
+    fprintf(stderr, "\nWrong password.");
+    return EXIT_FAILURE;
+  }
+
+  if (outfd == STDOUT_FILENO) {
+    printf("\n");
   }
 
   while(true) {
     read_size = read(infd, enc_buf, sizeof(enc_buf));
     if (read_size<0) {
-      perror("Failed to read file\n");
-      close_files(infd, outfd);
-      return -1;
+      fprintf(stderr, "\nCan't read file %s:%d.", opts.input_file, __LINE__);
+      return EXIT_FAILURE;
     }
     if (!read_size) {
       break;
     }
     xchacha_decrypt_bytes(&ctx, enc_buf, dec_buf, read_size);
     if ((write_to_file(outfd, dec_buf, read_size)) != read_size) {
-      fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
-      close_files(infd, outfd);
-      return -1;
+      fprintf(stderr, "\nFail write to %s:%d.", opts.output_file, __LINE__);
+      return EXIT_FAILURE;
     }
   }
+  return EXIT_SUCCESS;
+}
 
-  free(nonce24_str);
-  free(key_hash_str); free(key_hash32);
-  close_files(infd, outfd);
+
+int decryptor(options opts) {
+  int infd, outfd = STDOUT_FILENO;
+  uint8_t *key_hash32;
+
+  if (opts.verbose) {
+    verbose = 1;
+  }
+
+  if (create_input_fd(opts, &infd)) {
+    return EXIT_FAILURE;
+  }
+
+  if (verify_output_file_not_exists(opts)) {
+    close(infd);
+    return EXIT_FAILURE;
+  }
+
+  if (setup_dec_key(&key_hash32, opts)) {
+    close(infd);
+    return EXIT_FAILURE;
+  }
+
+  if (create_output_fd(opts, &outfd)) {
+    free(key_hash32);
+    close(infd);
+    return EXIT_FAILURE;
+  }
+
+  if (perform_decryption(opts, infd, outfd, key_hash32)) {
+    free(key_hash32);
+    close(infd); close(outfd);
+    return EXIT_FAILURE;
+  }
+
+  free(key_hash32);
+  close(infd); close(outfd);
 
   return 0;
 }

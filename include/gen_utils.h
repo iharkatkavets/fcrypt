@@ -6,8 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-uint8_t *gen_secure_bytes(size_t len);
-uint16_t gen_uint16();
-uint8_t *gen_nonce(size_t);
+size_t gen_secure_bytes(uint8_t *buf, size_t len);
+size_t gen_uint16(uint16_t *padsize);
 
 #endif

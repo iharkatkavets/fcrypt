@@ -6,6 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-char *uint8_to_hex(uint8_t *, size_t);
+void uint8_to_hex(char *, uint8_t *, size_t);
 
 #endif
