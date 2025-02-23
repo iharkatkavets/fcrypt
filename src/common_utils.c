@@ -39,7 +39,7 @@ ssize_t write_to_file(int outfd, uint8_t *buf, ssize_t to_write) {
 
 int create_input_fd(options opts, int *infd) {
   if ((*infd = open(opts.input_file, O_RDONLY)) < 0) {
-    fprintf(stderr, "\nCan't open '%s' file for reading", opts.input_file);
+    fprintf(stderr, "Can't open '%s' file for reading.\n", opts.input_file);
     return EXIT_FAILURE;
   } else {
     return EXIT_SUCCESS;
@@ -49,7 +49,7 @@ int create_input_fd(options opts, int *infd) {
 
 int verify_output_file_not_exists(options opts) {
   if (opts.output_file && file_exist(opts.output_file)) {
-    fprintf(stderr, "\nOutput file '%s' exists.", opts.output_file);
+    fprintf(stderr, "Output file '%s' exists.\n", opts.output_file);
     return EXIT_FAILURE;
   } else {
     return EXIT_SUCCESS;
@@ -64,7 +64,7 @@ int create_output_fd(options opts, int *outfd) {
   }
 
   if ((*outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 00600)) == -1) {
-    fprintf(stderr, "\nCan't open '%s' file for writing", opts.output_file);
+    fprintf(stderr, "Can't open '%s' file for writing.\n", opts.output_file);
     return EXIT_FAILURE;
   } else {
     return EXIT_SUCCESS;
@@ -85,19 +85,19 @@ int setup_enc_key(uint8_t **key_hash32, options opts) {
     keysize1 = read_input_safe("Enter password: ", key1, 256);
     if (!keysize1) {
       free(key1);
-      fprintf(stderr, "\nAbort");
+      fprintf(stderr, "\nAbort\n");
       return EXIT_FAILURE;
     }
     uint8_t *key2 = malloc(256);
     size_t keysize2 = read_input_safe("\nVerify password: ", key2, 256);
     if (!keysize2) {
       free(key1); free(key2);
-      fprintf(stderr, "\nAbort");
+      fprintf(stderr, "\nAbort\n");
       return EXIT_FAILURE;
     }
     if (keysize1 != keysize2 || memcmp(key1, key2, keysize1)) {
       free(key1); free(key2);
-      fprintf(stderr, "\nPasswords are not the same. Abort");
+      fprintf(stderr, "Passwords are not the same.");
       return EXIT_FAILURE;
     }
     free(key2);
@@ -124,7 +124,7 @@ int setup_dec_key(uint8_t **key_hash32, options opts) {
     keysize1 = read_input_safe("Enter password: ", key1, 256);
     if (!keysize1) {
       free(key1);
-      fprintf(stderr, "\nAbort");
+      fprintf(stderr, "\nAbort\n");
       return EXIT_FAILURE;
     }
   }
@@ -141,5 +141,5 @@ void create_password_hash(uint8_t **key_hash32, uint8_t *key, size_t keysize) {
   char key_hash_str[32*2+1];
   *key_hash32 = sha256_data(key, keysize);
   uint8_to_hex(key_hash_str, *key_hash32, 32);
-  vlog("\nSHA256(key): %s", key_hash_str);
+  vlog("SHA256(key): %s\n", key_hash_str);
 }

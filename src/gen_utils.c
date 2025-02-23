@@ -23,7 +23,7 @@ size_t gen_secure_bytes(uint8_t *buf, const size_t size) {
   while (remain) {
     size_t chunk = MIN(remain, (size_t)256);
     if (getentropy(p, chunk)<0) {
-      perror("\nFailed to generate random data");
+      perror("Failed to generate random data.\n");
       return remain;
     }
     p += chunk;

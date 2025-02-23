@@ -25,7 +25,7 @@ size_t gen_nonce(uint8_t *buf, size_t size) {
 
   if (!(result = gen_secure_bytes(buf, size))) {
     uint8_to_hex(nonce24_str, buf, size);
-    vlog("\nNonce[24]: %s", nonce24_str);
+    vlog("Nonce[24]: %s\n", nonce24_str);
   }
   return result;
 }
@@ -57,39 +57,39 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
   uint16_t padsize = -1;
 
   if (gen_nonce(nonce24, 24)) {
-    fprintf(stderr, "\nCan't generate IV.");
+    fprintf(stderr, "Can't generate IV.\n");
     return EXIT_FAILURE;
   }
 
   if ((write_to_file(outfd, nonce24, 24)) != 24) {
-    fprintf(stderr, "\nFail to write to %s:%d. Abort", opts.output_file, __LINE__);
+    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
     return EXIT_FAILURE;
   }
 
   if (gen_pad_size(&padsize, opts)) {
-    fprintf(stderr, "\nFail to generate pad size.");
+    fprintf(stderr, "Fail to generate pad size.\n");
     return EXIT_FAILURE;
   }
-  vlog("\nPadsize: %u", padsize);
+  vlog("Padsize: %u\n", padsize);
 
   xchacha_keysetup(&ctx, key_hash32, nonce24);
   xchacha_set_counter(&ctx, counter);
 
   xchacha_encrypt_bytes(&ctx, (uint8_t*)&(padsize), enc_buf, 2);
   if ((write_to_file(outfd, enc_buf, 2)) != 2) {
-    fprintf(stderr, "\nFailed to write to %s:%d.", opts.output_file, __LINE__);
+    fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
     return EXIT_FAILURE;
   }
 
   while (padsize > 0) {
     chunk = MIN((size_t)padsize, sizeof(enc_buf));
     if (gen_secure_bytes(pad_buf, chunk)) {
-      fprintf(stderr, "\nFailed to generate secure bytes %s:%d.", opts.output_file, __LINE__);
+      fprintf(stderr, "Failed to generate secure bytes %s:%d.\n", opts.output_file, __LINE__);
       return EXIT_FAILURE;
     }
     xchacha_encrypt_bytes(&ctx, pad_buf, enc_buf, chunk);
     if ((write_to_file(outfd, enc_buf, chunk)) != chunk) {
-      fprintf(stderr, "\nFailed to write to %s:%d", opts.output_file, __LINE__);
+      fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
       return EXIT_FAILURE;
     }
     padsize -= chunk;
@@ -97,14 +97,14 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
 
   xchacha_encrypt_bytes(&ctx, key_hash32, enc_buf, 32);
   if ((write_to_file(outfd, enc_buf, 32)) != 32) {
-    fprintf(stderr, "\nFailed to write to %s:%d.", opts.output_file, __LINE__);
+    fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
     return EXIT_FAILURE;
   }
 
   while(true) {
     read_size = read(infd, dec_buf, sizeof(dec_buf));
     if (read_size < 0) {
-      fprintf(stderr, "\nFailed to read file %s.", opts.input_file);
+      fprintf(stderr, "Failed to read file %s.\n", opts.input_file);
       return EXIT_FAILURE;
     }
     if (!read_size) {
@@ -112,7 +112,7 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
     }
     xchacha_encrypt_bytes(&ctx, dec_buf, enc_buf, read_size);
     if ((write_to_file(outfd, enc_buf, read_size)) != read_size) {
-      fprintf(stderr, "\nFailed to write to %s:%d.", opts.output_file, __LINE__);
+      fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
       return EXIT_FAILURE;
     }
   }
