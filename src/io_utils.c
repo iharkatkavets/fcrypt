@@ -13,7 +13,7 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   struct termios prev_params, new_params;
 
   if (tcgetattr(fileno(stdin), &prev_params) != 0) {
-    fprintf(stderr, "Fail to read termious state: %s\n", strerror(errno));
+    fprintf(stderr, "\nFail to read termious state: %s", strerror(errno));
     return -1;
   }
 
@@ -21,7 +21,7 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   new_params.c_lflag &= ~ECHO;
 
   if (tcsetattr(fileno(stdin), TCSAFLUSH, &new_params) != 0) {
-    fprintf(stderr, "Fail to turn off echo: %s\n", strerror(errno));
+    fprintf(stderr, "\nFail to turn off echo: %s", strerror(errno));
     return -1;
   }
 
@@ -30,16 +30,16 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
 
   read_size = read(STDIN_FILENO, out_buf, out_buf_size);
   if (tcsetattr(fileno(stdin), TCSAFLUSH, &prev_params) != 0) {
-    fprintf(stderr, "Failed to restore terminal settings: %s\n", strerror(errno));
+    fprintf(stderr, "\nFailed to restore terminal settings: %s", strerror(errno));
   }
 
   if (read_size < 1) {
-    fprintf(stderr, "Failed to read input: %s\n", strerror(errno));
+    fprintf(stderr, "\nFailed to read input: %s", strerror(errno));
     return -1;
   }
 
   if (read_size == 0) {
-    fprintf(stderr, "No input provided.\n");
+    fprintf(stderr, "\nNo input provided.");
     return -1;
   }
 
@@ -48,9 +48,11 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   }
 
   if (read_size < 1) {
-    fprintf(stderr, "No key provided\n");
+    fprintf(stderr, "\nNo key provided");
     return -1;
   }
+
+  fprintf(stderr, "\n");
 
   return read_size;
 }

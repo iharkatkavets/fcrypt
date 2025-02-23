@@ -76,10 +76,6 @@ int perform_decryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
     return EXIT_FAILURE;
   }
 
-  if (outfd == STDOUT_FILENO) {
-    printf("\n");
-  }
-
   while(true) {
     read_size = read(infd, enc_buf, sizeof(enc_buf));
     if (read_size<0) {

@@ -7,7 +7,6 @@
 #include "sha256.h"
 #include "convert_utils.h"
 #include "verbose.h"
-#include "core_utils.h"
 
 #include <fcntl.h>
 #include <errno.h>
@@ -144,4 +143,3 @@ void create_password_hash(uint8_t **key_hash32, uint8_t *key, size_t keysize) {
   uint8_to_hex(key_hash_str, *key_hash32, 32);
   vlog("\nSHA256(key): %s", key_hash_str);
 }
-

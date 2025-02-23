@@ -6,13 +6,13 @@
 #include <stdio.h>
 
 void print_usage(const char *program_name) {
-  printf("Usage: %s [-e <FILE> | --encrypt <FILE>] [-d <FILE> | --decrypt <FILE>] [-p <PASSWORD> | --password <PASSWORD>] [-l <PADSIZE> | --length <PADSIZE>] [-o | --output <FILE>] [-h | --help]\n", program_name);
+  printf("Usage: %s [-e <FILE> | --encrypt <FILE>] [-d <FILE> | --decrypt <FILE>] [-p <PASSWORD> | --password <PASSWORD>] [-P <PADSIZE> | --padsize <PADSIZE>] [-o | --output <FILE>] [-h | --help]\n", program_name);
   printf("Options:\n");
-  printf("  -d, --decrypt <FILE>        Run Decrypt operation.\n");
-  printf("  -e, --encrypt <FILE>        Run Encrypt operation.\n");
-  printf("  -l, --length <value>        Optional. Size of random bytes for padding. Generated randomly in range 0-65555 if not provided.\n");
+  printf("  -d, --decrypt <FILE>        Run Decrypting file operation.\n");
+  printf("  -e, --encrypt <FILE>        Run Encrypting file operation.\n");
+  printf("  -P, --padsize <value>       Optional. Size of random bytes for padding. Generated randomly in range 0-65555 if not provided.\n");
   printf("  -o, --output <FILE>         Output file.\n");
-  printf("  -p --password <PASSWORD>    The password for encrypt.\n");
+  printf("  -p --password <PASSWORD>    The password.\n");
   printf("  -v, --verbose               Enable verbose output.\n");
   printf("  -V                          Display the version number and exit.\n");
   printf("  -h, --help                  Show this help message and exit.\n");
@@ -40,7 +40,7 @@ int parse_arguments(options *opts, int argc, char **argv) {
 
   struct option long_options[] = {
     {"encrypt", required_argument, 0, 'e'},
-    {"length",  required_argument, 0, 'l'}, 
+    {"padsize", required_argument, 0, 'P'}, 
     {"password",required_argument, 0, 'p'},
     {"decrypt", required_argument, 0, 'd'},
     {"output",  required_argument, 0, 'o'}, 
@@ -49,9 +49,9 @@ int parse_arguments(options *opts, int argc, char **argv) {
     {0,         0,                 0,  0 }
   };
 
-  while ((option = getopt_long(argc, argv, "e:l:p:d:o:hvV", long_options, &option_index)) != -1) {
+  while ((option = getopt_long(argc, argv, "e:P:p:d:o:hvV", long_options, &option_index)) != -1) {
     switch (option) {
-      case 'l':
+      case 'P':
         padsize = atoi(optarg);
         if (padsize < 0 || padsize > 65535) {
           fprintf(stderr, "Invalid pad size. Must be in range [0, 65535].\n");
@@ -77,9 +77,11 @@ int parse_arguments(options *opts, int argc, char **argv) {
         break;
       case 'V':
         opts->show_version = 1;
+        return EXIT_SUCCESS;
         break;
       case 'h':
         opts->show_help = 1;
+        return EXIT_SUCCESS;
       case '?':
       default:
         return EXIT_FAILURE;
