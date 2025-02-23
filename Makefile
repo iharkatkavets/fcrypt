@@ -1,5 +1,14 @@
+BUILD ?= debug
+
 CC = gcc
-CFLAGS = -Iinclude -Wall -Wextra -O2
+
+ifeq ($(BUILD), debug)
+	CFLAGS = -Iinclude -Wall -Wextra -g
+else ifeq ($(BUILD), release)
+	CFLAGS = -Iinclude -Wall -Wextra -O2
+else
+    $(error Unknown build type "$(BUILD)". Use "debug" or "release".)
+endif
 
 SRC_DIR = src
 INCLUDE_DIR = include
@@ -40,5 +49,11 @@ test: $(TEST_TARGET)
 
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR) output.file
+
+debug:
+	$(MAKE) BUILD=debug
+
+release:
+	$(MAKE) BUILD=release
 
 .PHONY: all clean test
