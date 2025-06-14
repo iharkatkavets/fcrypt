@@ -35,6 +35,11 @@ At the moment it supports macOS only
   _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`  
   _Example:_ `senc -d encrypted.file -k 'password'`
 
+- **`-i <hint>`, `--hint <HINT>`**  
+  The hint to remember the password  
+  _Example:_ `senc -e origin.file -i 'hint' -o encrypted.file`  
+  _Example:_ `senc -d encrypted.file`
+
 - **`-o`, `--output <FILE>`**  
   The output file with encrypted content  
   _Example:_ `senc -e origin.file -o encrypted.file`  
@@ -43,6 +48,10 @@ At the moment it supports macOS only
 - **`-d`, `--decrypt`**  
   Decrypts the input file. The password will be prompted  
   _Example:_ `senc -d encrypted.file`
+
+- **`-n`, `--nohint`**  
+  Don't request to input hint  
+  _Example:_ `senc -n -e origin.file -o encrypted.file`
 
 - **`-v`, `--verbose`**  
   Add more output  
