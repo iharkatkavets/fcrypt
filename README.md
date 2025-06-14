@@ -70,18 +70,21 @@ ls ./bin
 XChaCha20 operates with a 256-bit key and a 192-bit nonce. It is safe to place
 the nonce at the beginning of the encrypted file. The hash of the key(password)
 is located after the padded bytes.
-All content except nonce is encrypted using XChaCha20 algorithm.
+All content except HINT_LEN, PASSWORD HINT, NONCE is encrypted using XChaCha20 algorithm.
 
-```txt
-                      ↓ ENCRYPTED FILE FORMAT ↓                      
-+---------------+-----------+----------------+-----------+-----------+
-|   24 bytes    |  2 bytes  | PAD_SIZE bytes | 32 bytes  | ...       |
-+---------------+-----------+----------------+-----------+-----------+
-| NON ENCRYPTED | RANDOM    |  ENCRYPTED     | ENCRYPTED | ENCRYPTED |
-| NONCE (IV)    | ENCRYPTED |  PADDING       | KEY HASH  | SRC FILE  |
-|               | PAD_SIZE  |  BYTES         | (SHA256)  |           |
-+---------------+-----------+----------------+-----------+-----------+
+```text
+                              ↓ ENCRYPTED FILE FORMAT ↓                      
++---------+----------+----------------+---------------+-----------+----------------+-----------+-----------+
+| 2 bytes | 2 bytes  | HINT_LEN bytes |   24 bytes    |  2 bytes  | PAD_SIZE bytes | 32 bytes  | ...       |
++---------+----------+----------------+---------------+-----------+----------------+-----------+-----------+
+| FORMAT  | HINT_LEN | NON ENCRYPTED  | NON ENCRYPTED | RANDOM    |  ENCRYPTED     | ENCRYPTED | ENCRYPTED |
+| VERSION |          | PASSWORD HINT  | NONCE (IV)    | ENCRYPTED |  PADDING       | KEY HASH  | SRC FILE  |   
+|   LE    |          |                |               | PAD_SIZE  |  BYTES         | (SHA256)  |           |
++---------+----------+----------------+---------------+-----------+----------------+-----------+-----------+
 ```
+
+**FORMAT_VERSION (2 bytes, little endian):**
+• Stores version of the format used
 
 **NON_ENCRYPTED_NONCE (24 bytes):**  
 • Stores the 192-bit nonce.  
