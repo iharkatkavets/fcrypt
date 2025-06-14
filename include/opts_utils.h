@@ -16,6 +16,8 @@ typedef struct {
     int show_version;
     int verbose;
     int padsize;
+    char *hint;
+    int no_hint;
 } Options;
 
 typedef Options options;

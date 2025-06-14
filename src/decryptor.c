@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <termios.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -86,7 +88,7 @@ int perform_decryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
       break;
     }
     xchacha_decrypt_bytes(&ctx, enc_buf, dec_buf, read_size);
-    if ((write_to_file(outfd, dec_buf, read_size)) != read_size) {
+    if ((write_bytes(outfd, dec_buf, read_size)) != read_size) {
       fprintf(stderr, "Fail write to %s:%d.\n", opts.output_file, __LINE__);
       return EXIT_FAILURE;
     }
@@ -94,10 +96,38 @@ int perform_decryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
   return EXIT_SUCCESS;
 }
 
+int extract_hint(int infd, uint8_t **hint, uint16_t *hint_len) {
+  uint16_t len = 0;
+  if (read_le16(infd, &len) != 0) {
+    return EXIT_FAILURE;
+  }
+
+  *hint = malloc(len);
+  if (*hint == NULL) {
+    return EXIT_FAILURE;
+  }
+  if (read_bytes(infd, *hint, len) != len) {
+    free(*hint);
+    return EXIT_FAILURE;
+  }
+
+  *hint_len = len;
+  return EXIT_SUCCESS;
+}
+
+int extract_version(int infd, uint16_t *version) {
+  if (read_le16(infd, version) != 0) {
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
 
 int decryptor(options opts) {
   int infd, outfd = STDOUT_FILENO;
   uint8_t *key_hash32;
+  uint16_t version = 0;
+  uint8_t *hint;
+  uint16_t hint_len;
 
   if (opts.verbose) {
     verbose = 1;
@@ -107,9 +137,27 @@ int decryptor(options opts) {
     return EXIT_FAILURE;
   }
 
-  if (verify_output_file_not_exists(opts)) {
+  if (check_output_file_absent(opts)) {
     close(infd);
     return EXIT_FAILURE;
+  }
+
+  if (extract_version(infd, &version)) {
+    close(infd);
+    return EXIT_FAILURE;
+  }
+
+  if (version > 0) {
+    if (extract_hint(infd, &hint, &hint_len)) {
+      close(infd);
+      return EXIT_FAILURE;
+    }
+    if (hint_len == 0) {
+      fprintf(stderr, "No password hint available.\n");
+    } else {
+      fprintf(stderr, "Hint: %s\n", hint);
+      free(hint);
+    }
   }
 
   if (setup_dec_key(&key_hash32, opts)) {
@@ -134,3 +182,4 @@ int decryptor(options opts) {
 
   return 0;
 }
+

@@ -12,13 +12,16 @@ void print_usage(const char *program_name) {
   printf("  -e, --encrypt <FILE>        Run Encrypting file operation.\n");
   printf("  -P, --padsize <value>       Optional. Size of random bytes for padding. Generated randomly in range 0-65555 if not provided.\n");
   printf("  -o, --output <FILE>         Output file.\n");
-  printf("  -p --password <PASSWORD>    The password.\n");
+  printf("  -p  --password <PASSWORD>   The password.\n");
+  printf("  -i  --hint <HINT>           The hint.\n");
+  printf("  -n  --nohint <HINT>         Don't request to input hint.\n");
   printf("  -v, --verbose               Enable verbose output.\n");
   printf("  -V                          Display the version number and exit.\n");
   printf("  -h, --help                  Show this help message and exit.\n");
   printf("Examples:\n");
   printf("  %s -e origin.file -o encrypted.file\n", program_name);
-  printf("  %s -e origin.file -o encrypted.file -p 'password'\n", program_name);
+  printf("  %s -e origin.file -o encrypted.file -i 'hint'\n", program_name);
+  printf("  %s -e origin.file -o encrypted.file -i 'hint' -p 'password'\n", program_name);
   printf("  %s -e origin.file > encrypted.file\n", program_name);
   printf("  %s -d encrypted.file\n", program_name);
   printf("  %s -d encrypted.file -p 'password'\n", program_name);
@@ -44,12 +47,14 @@ int parse_arguments(options *opts, int argc, char **argv) {
     {"password",required_argument, 0, 'p'},
     {"decrypt", required_argument, 0, 'd'},
     {"output",  required_argument, 0, 'o'}, 
+    {"hint",    required_argument, 0, 'i'}, 
+    {"nohint",  required_argument, 0, 'n'}, 
     {"verbose", no_argument,       0, 'v'},
     {"help",    no_argument,       0, 'h'},
     {0,         0,                 0,  0 }
   };
 
-  while ((option = getopt_long(argc, argv, "e:P:p:d:o:hvV", long_options, &option_index)) != -1) {
+  while ((option = getopt_long(argc, argv, "e:P:p:d:o:i:nhvV", long_options, &option_index)) != -1) {
     switch (option) {
       case 'P':
         padsize = atoi(optarg);
@@ -72,6 +77,12 @@ int parse_arguments(options *opts, int argc, char **argv) {
       case 'p':
         opts->password = optarg;
         break;
+      case 'i':
+        opts->hint = optarg;
+        break;
+      case 'n':
+        opts->no_hint = 1;
+        break;
       case 'v':
         opts->verbose = 1;
         break;
@@ -89,6 +100,9 @@ int parse_arguments(options *opts, int argc, char **argv) {
   }
 
   if (opts->encrypt && opts->decrypt) {
+    return EXIT_FAILURE;
+  }
+  if (opts->no_hint && opts->hint) {
     return EXIT_FAILURE;
   }
   opts->padsize = padsize;

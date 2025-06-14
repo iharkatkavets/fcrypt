@@ -2,18 +2,21 @@
 
 #include "encryptor.h"
 #include "common_utils.h"
+#include "version.h"
 #include "xchacha20.h"
 #include "convert_utils.h"
 #include "core_utils.h"
 #include "verbose.h"
 #include "opts_utils.h"
 #include "gen_utils.h"
+#include "version.h"
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/_types/_ssize_t.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -45,7 +48,7 @@ size_t gen_pad_size(uint16_t *padsize, options opts) {
 }
 
  
-int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
+int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t hint_len, uint8_t *hint_buf) {
   XChaCha_ctx ctx;
   uint8_t counter[8] = {0x1};
   uint8_t enc_buf[4096];
@@ -61,7 +64,22 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
     return EXIT_FAILURE;
   }
 
-  if ((write_to_file(outfd, nonce24, 24)) != 24) {
+  if ((write_bytes(outfd, FORMAT_VERSION, 2)) != 2) {
+    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    return EXIT_FAILURE;
+  }
+
+  if ((write_le16(outfd, (uint16_t)hint_len)) != 2) {
+    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    return EXIT_FAILURE;
+  }
+
+  if ((write_bytes(outfd, hint_buf, hint_len)) != hint_len) {
+    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    return EXIT_FAILURE;
+  }
+
+  if ((write_bytes(outfd, nonce24, 24)) != 24) {
     fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
     return EXIT_FAILURE;
   }
@@ -76,7 +94,7 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
   xchacha_set_counter(&ctx, counter);
 
   xchacha_encrypt_bytes(&ctx, (uint8_t*)&(padsize), enc_buf, 2);
-  if ((write_to_file(outfd, enc_buf, 2)) != 2) {
+  if ((write_bytes(outfd, enc_buf, 2)) != 2) {
     fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
     return EXIT_FAILURE;
   }
@@ -88,7 +106,7 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
       return EXIT_FAILURE;
     }
     xchacha_encrypt_bytes(&ctx, pad_buf, enc_buf, chunk);
-    if ((write_to_file(outfd, enc_buf, chunk)) != chunk) {
+    if ((write_bytes(outfd, enc_buf, chunk)) != chunk) {
       fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
       return EXIT_FAILURE;
     }
@@ -96,7 +114,7 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
   }
 
   xchacha_encrypt_bytes(&ctx, key_hash32, enc_buf, 32);
-  if ((write_to_file(outfd, enc_buf, 32)) != 32) {
+  if ((write_bytes(outfd, enc_buf, 32)) != 32) {
     fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
     return EXIT_FAILURE;
   }
@@ -111,7 +129,7 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
       break;
     }
     xchacha_encrypt_bytes(&ctx, dec_buf, enc_buf, read_size);
-    if ((write_to_file(outfd, enc_buf, read_size)) != read_size) {
+    if ((write_bytes(outfd, enc_buf, read_size)) != read_size) {
       fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
       return EXIT_FAILURE;
     }
@@ -123,6 +141,8 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32) {
 int encryptor(options opts) {
   int infd, outfd;
   uint8_t *key_hash32;
+  uint8_t *hint;
+  size_t hint_len = 0;
 
   if (opts.verbose) {
     verbose = 1;
@@ -132,7 +152,7 @@ int encryptor(options opts) {
     return EXIT_FAILURE;
   }
 
-  if (verify_output_file_not_exists(opts)) {
+  if (check_output_file_absent(opts)) {
     close(infd);
     return EXIT_FAILURE;
   }
@@ -142,13 +162,21 @@ int encryptor(options opts) {
     return EXIT_FAILURE;
   }
 
+  if (!opts.no_hint) {
+    if (resolve_hint(&hint, &hint_len, opts)) {
+      close(infd);
+      return EXIT_FAILURE;
+    }
+  }
+
   if (create_output_fd(opts, &outfd)) {
+    free(hint);
     free(key_hash32);
     close(infd);
     return EXIT_FAILURE;
   }
 
-  if (perform_encryption(opts, infd, outfd, key_hash32)) {
+  if (perform_encryption(opts, infd, outfd, key_hash32, hint_len, hint)) {
     free(key_hash32);
     close(infd); close(outfd);
     return EXIT_FAILURE;
