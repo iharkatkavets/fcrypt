@@ -1,4 +1,4 @@
-# Secure Encryptor
+# fcrypt
 
 A command-line tool for encrypting and decrypting files using the XChaCha20 algorithm.
 
@@ -9,61 +9,61 @@ At the moment it supports macOS only
 ## How to encrypt the file
 
 ```bash
-./bin/senc -e origin.file -o encrypted.file 
+./bin/fcrypt -e origin.file -o encrypted.file 
 ```
 
 ## How to decrypt the file
 
 ```bash
-./bin/senc -d encrypted.file -o decrypted.file
-./bin/senc -d encrypted.file
+./bin/fcrypt -d encrypted.file -o decrypted.file
+./bin/fcrypt -d encrypted.file
 ```
 
 ## Arguments and Parameters
 
 - **`-e <FILE>`, `--encrypt <FILE>`**  
   Encrypts the input file. The password will be prompted  
-  _Example:_ `senc -e origin.file -o encrypted.file`
+  _Example:_ `fcrypt -e origin.file -o encrypted.file`
 
 - **`-P <SIZE>`, `--padsize <SIZE>`**  
   The pad size. Must be in range [0,65535]. Taken random size if
   not provided.  
-  _Example:_ `senc -e origin.file -P 16 -o encrypted.file`
+  _Example:_ `fcrypt -e origin.file -P 16 -o encrypted.file`
 
 - **`-p <PASSWORD>`, `--password <PASSWORD>`**  
   The password of len up 256 characters.  
-  _Example:_ `senc -e origin.file -k 'password' -o encrypted.file`  
-  _Example:_ `senc -d encrypted.file -k 'password'`
+  _Example:_ `fcrypt -e origin.file -k 'password' -o encrypted.file`  
+  _Example:_ `fcrypt -d encrypted.file -k 'password'`
 
 - **`-i <hint>`, `--hint <HINT>`**  
   The hint to remember the password  
-  _Example:_ `senc -e origin.file -i 'hint' -o encrypted.file`  
-  _Example:_ `senc -d encrypted.file`
+  _Example:_ `fcrypt -e origin.file -i 'hint' -o encrypted.file`  
+  _Example:_ `fcrypt -d encrypted.file`
 
 - **`-o`, `--output <FILE>`**  
   The output file with encrypted content  
-  _Example:_ `senc -e origin.file -o encrypted.file`  
-  _Example:_ `senc -d encrypted.file -o origin.file`
+  _Example:_ `fcrypt -e origin.file -o encrypted.file`  
+  _Example:_ `fcrypt -d encrypted.file -o origin.file`
 
 - **`-d`, `--decrypt`**  
   Decrypts the input file. The password will be prompted  
-  _Example:_ `senc -d encrypted.file`
+  _Example:_ `fcrypt -d encrypted.file`
 
 - **`-n`, `--nohint`**  
   Don't request to input hint  
-  _Example:_ `senc -n -e origin.file -o encrypted.file`
+  _Example:_ `fcrypt -n -e origin.file -o encrypted.file`
 
 - **`-v`, `--verbose`**  
   Add more output  
-  _Example:_ `senc -v -e origin.file -o encrypted.file`
+  _Example:_ `fcrypt -v -e origin.file -o encrypted.file`
 
 - **`-V`**  
   Print version number and exit  
-  _Example:_ `senc -V`
+  _Example:_ `fcrypt -V`
 
 - **`-h`, `--help`**  
   Print help  
-  _Example:_ `senc -h`
+  _Example:_ `fcrypt -h`
 
 ## How to compile the project
 

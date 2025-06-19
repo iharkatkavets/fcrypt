@@ -26,7 +26,7 @@ TEST_SRCS = $(wildcard $(TEST_DIR)/*.c)
 TEST_OBJS = $(patsubst $(TEST_DIR)/%.c, $(BUILD_DIR)/%.o, $(TEST_SRCS))
 TEST_TARGET = $(BUILD_DIR)/test_runner
 
-TOOL_BIN = $(BIN_DIR)/senc
+TOOL_BIN = $(BIN_DIR)/fcrypt
 
 $(shell mkdir -p $(BUILD_DIR) $(BIN_DIR))
 
