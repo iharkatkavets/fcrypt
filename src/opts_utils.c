@@ -37,7 +37,7 @@ void print_usage(const char *program_name) {
 }
 
 void print_version(const char *program_name) {
-  printf("%s %s\n", program_name, TOOL_VERSION);
+  printf("%s %s\n", program_name, FCRYPT_VERSION);
 }
 
 int parse_arguments(options *opts, int argc, char **argv) {

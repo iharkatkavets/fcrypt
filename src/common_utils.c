@@ -4,6 +4,7 @@
 
 #include "file_utils.h"
 #include "io_utils.h"
+#include "log_utils.h"
 #include "sha256.h"
 #include "convert_utils.h"
 #include "verbose.h"
@@ -87,7 +88,7 @@ int create_output_fd(options opts, int *outfd) {
 }
 
 
-int setup_enc_key(uint8_t **key_hash32, options opts) {
+int setup_enc_key(uint8_t hash_out[32], options opts) {
   uint8_t *key1;
   size_t keysize1;
 
@@ -118,7 +119,8 @@ int setup_enc_key(uint8_t **key_hash32, options opts) {
     free(key2);
   }
 
-  create_password_hash(key_hash32, key1, keysize1);
+  uint8_t *hash = create_password_hash(key1, keysize1);
+  memcpy(hash_out, hash, 32);
   memset(key1, 0, keysize1);
   free(key1);
 
@@ -126,9 +128,9 @@ int setup_enc_key(uint8_t **key_hash32, options opts) {
 }
 
 
-int setup_dec_key(uint8_t **key_hash32, options opts) {
-  uint8_t *key1;
-  size_t keysize1;
+int setup_dec_key(uint8_t hash_out[32], options opts) {
+  uint8_t *key1 = NULL;
+  size_t keysize1 = 0;
 
   if (opts.password) {
     keysize1 = strlen(opts.password);
@@ -145,7 +147,8 @@ int setup_dec_key(uint8_t **key_hash32, options opts) {
     fprintf(stderr, "\n");
   }
 
-  create_password_hash(key_hash32, key1, keysize1);
+  uint8_t *hash = create_password_hash(key1, keysize1);
+  memcpy(hash_out, hash, 32);
   memset(key1, 0, keysize1);
   free(key1);
 
@@ -153,11 +156,9 @@ int setup_dec_key(uint8_t **key_hash32, options opts) {
 }
 
 
-void create_password_hash(uint8_t **key_hash32, uint8_t *key, size_t keysize) {
-  char key_hash_str[32*2+1];
-  *key_hash32 = sha256_data(key, keysize);
-  uint8_to_hex(key_hash_str, *key_hash32, 32);
-  vlog("SHA256(key): %s\n", key_hash_str);
+uint8_t *create_password_hash(uint8_t *key, size_t keysize) {
+  uint8_t *hash = sha256_data(key, keysize);
+  return hash;
 }
 
 

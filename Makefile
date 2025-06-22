@@ -1,11 +1,11 @@
 BUILD ?= debug
-LUA_INC ?= /opt/homebrew/include/lua
-LUA_LIB ?= /opt/homebrew/lib
+LUAJIT_INC ?= /opt/homebrew/include/luajit-2.1
+LUAJIT_LIB ?= /opt/homebrew/lib
 
 CC = gcc
 
 ifeq ($(BUILD), debug)
-	CFLAGS = -Iinclude -Wall -Wextra -g
+	CFLAGS = -Iinclude -Wall -Wextra -g -DDEBUG
 else ifeq ($(BUILD), release)
 	CFLAGS = -Iinclude -Wall -Wextra -O2
 else
@@ -13,34 +13,40 @@ else
 endif
 
 SRC_DIR = src
+TEST_DIR := test
 INCLUDE_DIR = include
 BUILD_DIR = build
 BIN_DIR = bin
 
-COMMON_SRC = $(SRC_DIR)/common_utils.c $(SRC_DIR)/convert_utils.c $(SRC_DIR)/io_utils.c $(SRC_DIR)/sha256.c $(SRC_DIR)/xchacha20.c $(SRC_DIR)/verbose.c $(SRC_DIR)/opts_utils.c $(SRC_DIR)/encryptor.c $(SRC_DIR)/decryptor.c $(SRC_DIR)/file_utils.c $(SRC_DIR)/gen_utils.c
+COMMON_SRC = $(SRC_DIR)/common_utils.c $(SRC_DIR)/convert_utils.c $(SRC_DIR)/io_utils.c $(SRC_DIR)/sha256.c $(SRC_DIR)/xchacha20.c $(SRC_DIR)/verbose.c $(SRC_DIR)/opts_utils.c $(SRC_DIR)/encrypt.c $(SRC_DIR)/decrypt.c $(SRC_DIR)/file_utils.c $(SRC_DIR)/gen_utils.c
 TOOL_SRC = $(SRC_DIR)/main.c
 LUA_SRC = $(SRC_DIR)/lua_binding.c
+
+TEST_SRCS := $(wildcard $(TEST_DIR)/test_*.c)
+TEST_BINS := $(TEST_SRCS:$(TEST_DIR)/%.c=$(BUILD_DIR)/%)
 
 COMMON_OBJ = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(COMMON_SRC))
 TOOL_OBJ = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(TOOL_SRC))
 
-TOOL_BIN = $(BIN_DIR)/fcrypt
-LUA_MODULE = $(BIN_DIR)/fcrypt.so
+TOOL = fcrypt
+TOOL_PATH = $(BIN_DIR)/$(TOOL)
+LUA_MODULE = fcrypt_lua_mod.so
+LUA_MODULE_PATH = $(BIN_DIR)/$(LUA_MODULE)
 
 $(shell mkdir -p $(BUILD_DIR) $(BIN_DIR))
 
-all: $(TOOL_BIN)
+all: $(TOOL_PATH) $(LUA_MODULE_PATH)
 
-$(TOOL_BIN): $(TOOL_OBJ) $(COMMON_OBJ)
+$(TOOL_PATH): $(TOOL_OBJ) $(COMMON_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-lua: $(LUA_MODULE)
+lua: $(LUA_MODULE_PATH)
 
-$(LUA_MODULE): $(LUA_SRC) $(COMMON_SRC)
-	$(CC) $(CFLAGS) -fPIC -shared -I$(LUA_INC) -L$(LUA_LIB) -llua -o $@ $^
+$(LUA_MODULE_PATH): $(LUA_SRC) $(COMMON_SRC)
+	$(CC) $(CFLAGS) -fPIC -shared -I$(LUAJIT_INC) -L$(LUAJIT_LIB) -lluajit-5.1 -o $@ $^
 
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR) output.file
@@ -51,4 +57,10 @@ debug:
 release:
 	$(MAKE) BUILD=release
 
-.PHONY: all clean lua
+$(BUILD_DIR)/test_%: $(TEST_DIR)/test_%.c $(COMMON_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
+
+test: $(TEST_BINS)
+	@for bin in $(TEST_BINS); do echo "Running $$bin..."; $$bin || exit 1; done
+
+.PHONY: all clean lua test

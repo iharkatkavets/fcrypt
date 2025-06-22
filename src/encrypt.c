@@ -1,6 +1,6 @@
 /* encryptor.c */
 
-#include "encryptor.h"
+#include "encrypt.h"
 #include "common_utils.h"
 #include "version.h"
 #include "xchacha20.h"
@@ -48,7 +48,7 @@ size_t gen_pad_size(uint16_t *padsize, options opts) {
 }
 
  
-int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t hint_len, uint8_t *hint_buf) {
+int encrypt_file(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t hint_len, uint8_t *hint_buf) {
   XChaCha_ctx ctx;
   uint8_t counter[8] = {0x1};
   uint8_t enc_buf[4096];
@@ -138,9 +138,9 @@ int perform_encryption(options opts, int infd, int outfd, uint8_t *key_hash32, s
 }
 
 
-int encryptor(options opts) {
+int fcrypt_encrypt_from_opts(options opts) {
   int infd, outfd;
-  uint8_t *key_hash32;
+  uint8_t key_hash32[32];
   uint8_t *hint;
   size_t hint_len = 0;
 
@@ -157,7 +157,7 @@ int encryptor(options opts) {
     return EXIT_FAILURE;
   }
 
-  if (setup_enc_key(&key_hash32, opts)) {
+  if (setup_enc_key(key_hash32, opts)) {
     close(infd);
     return EXIT_FAILURE;
   }
@@ -171,18 +171,15 @@ int encryptor(options opts) {
 
   if (create_output_fd(opts, &outfd)) {
     free(hint);
-    free(key_hash32);
     close(infd);
     return EXIT_FAILURE;
   }
 
-  if (perform_encryption(opts, infd, outfd, key_hash32, hint_len, hint)) {
-    free(key_hash32);
+  if (encrypt_file(opts, infd, outfd, key_hash32, hint_len, hint)) {
     close(infd); close(outfd);
     return EXIT_FAILURE;
   }
 
-  free(key_hash32);
   close(infd); close(outfd);
 
   return EXIT_SUCCESS;
