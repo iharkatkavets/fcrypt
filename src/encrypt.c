@@ -1,15 +1,18 @@
 /* encryptor.c */
 
 #include "encrypt.h"
+#include "buf_utils.h"
 #include "common_utils.h"
+#include "log_utils.h"
 #include "version.h"
 #include "xchacha20.h"
 #include "convert_utils.h"
 #include "core_utils.h"
 #include "verbose.h"
 #include "opts_utils.h"
-#include "gen_utils.h"
+#include "random.h"
 #include "version.h"
+#include "file_utils.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -22,33 +25,95 @@
 #include <stdbool.h>
 
 
-size_t gen_nonce(uint8_t *buf, size_t size) {
-  char nonce24_str[size*2+1];
-  size_t result; 
+int fcrypt_encrypt_buf(
+  const uint8_t *in_buf,
+  size_t in_buf_len,
+  const uint8_t *key,
+  size_t key_len,
+  const uint8_t *hint,
+  size_t hint_len,
+  uint16_t padsize,
+  uint8_t *out_buf, // NULL for sizing
+  size_t out_buf_capacity, // 0 for sizing
+  size_t *out_len
+) {
+  char key_hash_str[32*2+1];
+  uint8_t *key_hash32;
+  uint8_t nonce24[24];
+  char nonce24_str[24*2+1];
+  XChaCha_ctx ctx;
+  uint8_t counter[8] = {0x1};
+  uint8_t enc_buf[4096];
+  size_t chunk = 0;
+  uint8_t pad_buf[4096];
+  size_t wrote = 0;
 
-  if (!(result = gen_secure_bytes(buf, size))) {
-    uint8_to_hex(nonce24_str, buf, size);
-    vlog("Nonce[24]: %s\n", nonce24_str);
-  }
-  return result;
-}
-
-
-size_t gen_pad_size(uint16_t *padsize, options opts) {
-  if (opts.padsize != -1) {
-    *padsize = (uint16_t)opts.padsize;
-    return EXIT_SUCCESS;
-  }
-
-  if(gen_uint16(padsize)) {
+  if (fcrypt_gen_nonce(nonce24, 24)) {
+    LOG_ERR("Can't generate IV.\n");
     return EXIT_FAILURE;
   }
+  bytes_to_hexstr(nonce24_str, nonce24, 24);
+  vlog("Nonce[24]: %s\n", nonce24_str);
+
+#define CHECK_WRITE(N) \
+    do { \
+        if (out_buf && wrote + (N) > out_buf_capacity) return EXIT_FAILURE; \
+    } while(0)
+
+#define WRITE_PTR (out_buf ? out_buf + wrote : NULL)
+
+  CHECK_WRITE(2); wrote += write_mem(WRITE_PTR, FORMAT_VERSION, 2);
+  CHECK_WRITE(2); wrote += write_u16_le_buf(WRITE_PTR, hint_len);
+  CHECK_WRITE(hint_len); wrote += write_mem(WRITE_PTR, hint, hint_len);
+  CHECK_WRITE(24); wrote += write_mem(WRITE_PTR, nonce24, 24);
+
+  key_hash32 = fcrypt_compute_password_hash(key, key_len);
+  bytes_to_hexstr(key_hash_str, key_hash32, 32);
+  vlog("SHA256(key): %s\n", key_hash_str);
+
+  xchacha_keysetup(&ctx, key_hash32, nonce24);
+  xchacha_set_counter(&ctx, counter);
+
+  xchacha_encrypt_bytes(&ctx, (uint8_t*)&(padsize), enc_buf, 2);
+  CHECK_WRITE(2); wrote += write_mem(WRITE_PTR, enc_buf, 2);
+
+  uint16_t pad_left = padsize;
+  while (pad_left > 0) {
+    chunk = MIN((size_t)pad_left, sizeof(enc_buf));
+    if (fcrypt_gen_bytes(pad_buf, chunk)) {
+      LOG_ERR("Failed to generate secure bytes.\n");
+      return EXIT_FAILURE;
+    }
+    xchacha_encrypt_bytes(&ctx, pad_buf, enc_buf, chunk);
+    CHECK_WRITE(chunk); wrote += write_mem(WRITE_PTR, enc_buf, chunk);
+    pad_left -= chunk;
+  }
+
+  xchacha_encrypt_bytes(&ctx, key_hash32, enc_buf, 32);
+  CHECK_WRITE(32); wrote += write_mem(WRITE_PTR, enc_buf, 32);
+
+  size_t in_buf_offset = 0;
+  while(in_buf_offset < in_buf_len) {
+    chunk = MIN(in_buf_len-in_buf_offset, sizeof(enc_buf));
+    xchacha_encrypt_bytes(&ctx, in_buf+in_buf_offset, enc_buf, chunk);
+    CHECK_WRITE(chunk); wrote += write_mem(WRITE_PTR, enc_buf, chunk);
+    in_buf_offset += chunk;
+  }
+
+  *out_len = wrote;
 
   return EXIT_SUCCESS;
-}
+} 
 
  
-int encrypt_file(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t hint_len, uint8_t *hint_buf) {
+int fcrypt_encrypt_file(
+  options opts, 
+  int infd, 
+  int outfd, 
+  uint8_t *key_hash32, 
+  ssize_t hint_len, 
+  uint8_t *hint_buf
+) {
   XChaCha_ctx ctx;
   uint8_t counter[8] = {0x1};
   uint8_t enc_buf[4096];
@@ -59,33 +124,33 @@ int encrypt_file(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t
   uint8_t nonce24[24];
   uint16_t padsize = -1;
 
-  if (gen_nonce(nonce24, 24)) {
-    fprintf(stderr, "Can't generate IV.\n");
+  if (fcrypt_gen_nonce(nonce24, 24)) {
+    LOG_ERR("Can't generate IV.\n");
     return EXIT_FAILURE;
   }
 
   if ((write_bytes(outfd, FORMAT_VERSION, 2)) != 2) {
-    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    LOG_ERR("Fail to write to file.\n");
     return EXIT_FAILURE;
   }
 
   if ((write_le16(outfd, (uint16_t)hint_len)) != 2) {
-    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    LOG_ERR("Fail to write to file.\n");
     return EXIT_FAILURE;
   }
 
   if ((write_bytes(outfd, hint_buf, hint_len)) != hint_len) {
-    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    LOG_ERR("Fail to write to file.\n");
     return EXIT_FAILURE;
   }
 
   if ((write_bytes(outfd, nonce24, 24)) != 24) {
-    fprintf(stderr, "Fail to write to %s:%d.\n", opts.output_file, __LINE__);
+    LOG_ERR("Fail to write to file.\n");
     return EXIT_FAILURE;
   }
 
-  if (gen_pad_size(&padsize, opts)) {
-    fprintf(stderr, "Fail to generate pad size.\n");
+  if (fcrypt_gen_pad_size(&padsize, opts)) {
+    LOG_ERR("Fail to generate pad size.\n");
     return EXIT_FAILURE;
   }
   vlog("Padsize: %u\n", padsize);
@@ -95,19 +160,19 @@ int encrypt_file(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t
 
   xchacha_encrypt_bytes(&ctx, (uint8_t*)&(padsize), enc_buf, 2);
   if ((write_bytes(outfd, enc_buf, 2)) != 2) {
-    fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
+    LOG_ERR("Failed to write to file.\n");
     return EXIT_FAILURE;
   }
 
   while (padsize > 0) {
     chunk = MIN((size_t)padsize, sizeof(enc_buf));
-    if (gen_secure_bytes(pad_buf, chunk)) {
-      fprintf(stderr, "Failed to generate secure bytes %s:%d.\n", opts.output_file, __LINE__);
+    if (fcrypt_gen_bytes(pad_buf, chunk)) {
+      LOG_ERR("Failed to generate secure bytes.\n");
       return EXIT_FAILURE;
     }
     xchacha_encrypt_bytes(&ctx, pad_buf, enc_buf, chunk);
     if ((write_bytes(outfd, enc_buf, chunk)) != chunk) {
-      fprintf(stderr, "Failed to write to %s:%d\n", opts.output_file, __LINE__);
+      LOG_ERR("Failed to write to file.\n");
       return EXIT_FAILURE;
     }
     padsize -= chunk;
@@ -115,14 +180,14 @@ int encrypt_file(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t
 
   xchacha_encrypt_bytes(&ctx, key_hash32, enc_buf, 32);
   if ((write_bytes(outfd, enc_buf, 32)) != 32) {
-    fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
+    LOG_ERR("Failed to write to file.\n");
     return EXIT_FAILURE;
   }
 
   while(true) {
     read_size = read(infd, dec_buf, sizeof(dec_buf));
     if (read_size < 0) {
-      fprintf(stderr, "Failed to read file %s.\n", opts.input_file);
+      LOG_ERR("Failed read input file.\n");
       return EXIT_FAILURE;
     }
     if (!read_size) {
@@ -130,7 +195,7 @@ int encrypt_file(options opts, int infd, int outfd, uint8_t *key_hash32, ssize_t
     }
     xchacha_encrypt_bytes(&ctx, dec_buf, enc_buf, read_size);
     if ((write_bytes(outfd, enc_buf, read_size)) != read_size) {
-      fprintf(stderr, "Failed to write to %s:%d.\n", opts.output_file, __LINE__);
+      LOG_ERR("Failed to write to file.\n");
       return EXIT_FAILURE;
     }
   }
@@ -148,34 +213,34 @@ int fcrypt_encrypt_from_opts(options opts) {
     verbose = 1;
   }
 
-  if (create_input_fd(opts, &infd)) {
+  if (create_input_fd(opts.input_file, &infd)) {
     return EXIT_FAILURE;
   }
 
-  if (check_output_file_absent(opts)) {
+  if (fcrypt_check_file_absent(opts.output_file)) {
     close(infd);
     return EXIT_FAILURE;
   }
 
-  if (setup_enc_key(key_hash32, opts)) {
+  if (fcrypt_resolve_encryption_key(key_hash32, opts)) {
     close(infd);
     return EXIT_FAILURE;
   }
 
   if (!opts.no_hint) {
-    if (resolve_hint(&hint, &hint_len, opts)) {
+    if (fcrypt_resolve_hint(&hint, &hint_len, opts)) {
       close(infd);
       return EXIT_FAILURE;
     }
   }
 
-  if (create_output_fd(opts, &outfd)) {
+  if (create_output_fd(opts.output_file, &outfd)) {
     free(hint);
     close(infd);
     return EXIT_FAILURE;
   }
 
-  if (encrypt_file(opts, infd, outfd, key_hash32, hint_len, hint)) {
+  if (fcrypt_encrypt_file(opts, infd, outfd, key_hash32, hint_len, hint)) {
     close(infd); close(outfd);
     return EXIT_FAILURE;
   }

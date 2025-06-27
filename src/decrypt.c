@@ -8,6 +8,7 @@
 #include "verbose.h"
 #include "opts_utils.h"
 #include "log_utils.h"
+#include "file_utils.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -66,8 +67,8 @@ int fcrypt_decrypt_buf(
     }
   }
 
-  key_hash32 = create_password_hash(key, key_len);
-  uint8_to_hex(key_hash_str, key_hash32, 32);
+  key_hash32 = fcrypt_compute_password_hash(key, key_len);
+  bytes_to_hexstr(key_hash_str, key_hash32, 32);
   vlog("SHA256(key): %s\n", key_hash_str);
 
   if (fcrypt_decrypt_payload_buf(in_buf, in_len, key_hash32, out_buf, out_len)) {
@@ -100,7 +101,7 @@ int fcrypt_decrypt_payload_buf(
   memcpy(nonce24, in_buf, 24);
   in_len -= 24;
   in_buf += 24;
-  uint8_to_hex(nonce24_str, nonce24, 24);
+  bytes_to_hexstr(nonce24_str, nonce24, 24);
   vlog("\nNonce[24]: %s", nonce24_str);
 
   xchacha_keysetup(&ctx, key_hash32, nonce24);
@@ -176,7 +177,7 @@ int fcrypt_decrypt_payload_fd(int infd, int outfd, const uint8_t *key_hash32) {
     return EXIT_FAILURE;
   }
 
-  uint8_to_hex(nonce24_str, nonce24, 24);
+  bytes_to_hexstr(nonce24_str, nonce24, 24);
   vlog("\nNonce[24]: %s", nonce24_str);
 
   xchacha_keysetup(&ctx, key_hash32, nonce24);
@@ -311,11 +312,11 @@ int fcrypt_decrypt_from_opts(options opts) {
     verbose = 1;
   }
 
-  if (create_input_fd(opts, &infd)) {
+  if (create_input_fd(opts.input_file, &infd)) {
     return EXIT_FAILURE;
   }
 
-  if (check_output_file_absent(opts)) {
+  if (fcrypt_check_file_absent(opts.output_file)) {
     close(infd);
     return EXIT_FAILURE;
   }
@@ -338,14 +339,14 @@ int fcrypt_decrypt_from_opts(options opts) {
     }
   }
 
-  if (setup_dec_key(key_hash32, opts)) {
+  if (fcrypt_resolve_decryption_key(key_hash32, opts)) {
     close(infd);
     return EXIT_FAILURE;
   }
-  uint8_to_hex(key_hash_str, key_hash32, 32);
+  bytes_to_hexstr(key_hash_str, key_hash32, 32);
   vlog("SHA256(key): %s\n", key_hash_str);
 
-  if (create_output_fd(opts, &outfd)) {
+  if (create_output_fd(opts.output_file, &outfd)) {
     close(infd);
     return EXIT_FAILURE;
   }

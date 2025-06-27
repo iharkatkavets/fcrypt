@@ -9,16 +9,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-ssize_t write_bytes(int outfd, const uint8_t *buf, ssize_t to_write);
-int write_le16(int outfd, uint16_t value);
-int read_le16(int infd, uint16_t *value);
-int create_input_fd(options opts, int *infd);
-int check_output_file_absent(options opts);
-int create_output_fd(options opts, int *outfd);
-int setup_enc_key(uint8_t hash_out[32], options opts);
-int setup_dec_key(uint8_t hash_out[32], options opts);
-uint8_t *create_password_hash(uint8_t *key, size_t keysize);
-int resolve_hint(uint8_t **hint_out, size_t *hint_len_out, options opts);
-ssize_t read_bytes(int infd, uint8_t *buf, ssize_t count);
+int fcrypt_check_file_absent(const char *path);
+int fcrypt_resolve_encryption_key(uint8_t hash_out[32], options opts);
+int fcrypt_resolve_decryption_key(uint8_t hash_out[32], options opts);
+uint8_t *fcrypt_compute_password_hash(uint8_t *key, size_t keysize);
+int fcrypt_resolve_hint(uint8_t **hint_out, size_t *hint_len_out, options opts);
+size_t fcrypt_gen_nonce(uint8_t *buf, size_t size);
+int fcrypt_gen_pad_size(uint16_t *padsize, options opts);
 
 #endif

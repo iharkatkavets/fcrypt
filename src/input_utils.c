@@ -1,6 +1,6 @@
 /* io_utils.c */
 
-#include "io_utils.h"
+#include "input_utils.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <termios.h>
@@ -8,7 +8,7 @@
 #include <string.h>
 #include <errno.h>
 
-size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
+size_t fcrypt_read_password(const char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   size_t read_size;
   struct termios prev_params, new_params;
 
@@ -55,7 +55,7 @@ size_t read_input_safe(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   return read_size;
 }
 
-size_t read_input(char *prompt, uint8_t *out_buf, size_t out_buf_size) {
+size_t fcrypt_read_str(const char *prompt, uint8_t *out_buf, size_t out_buf_size) {
   size_t read_size;
   struct termios prev_params, new_params;
 
