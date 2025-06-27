@@ -1,7 +1,7 @@
-/* io_utils.h */
+/* input.h */
 
-#ifndef IO_UTILS_H
-#define IO_UTILS_H
+#ifndef INPUT_UTILS_H
+#define INPUT_UTILS_H
 
 #include <stdlib.h>
 #include <stdio.h>

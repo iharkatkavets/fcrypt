@@ -1,4 +1,4 @@
-/* decryptor.h */
+/* decrypt.h */
 
 #ifndef FCRYPT_DECRYPT_H
 #define FCRYPT_DECRYPT_H

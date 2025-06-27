@@ -1,6 +1,7 @@
 BUILD ?= debug
-LUAJIT_INC ?= /opt/homebrew/include/luajit-2.1
-LUAJIT_LIB ?= /opt/homebrew/lib
+
+LUAJIT_INCLUDE ?= $(shell pkg-config --cflags luajit)
+LUAJIT_LIB ?= $(shell pkg-config --libs luajit)
 
 CC = gcc
 
@@ -18,7 +19,7 @@ INCLUDE_DIR = include
 BUILD_DIR = build
 BIN_DIR = bin
 
-COMMON_SRC = $(SRC_DIR)/common_utils.c $(SRC_DIR)/convert_utils.c $(SRC_DIR)/input_utils.c $(SRC_DIR)/sha256.c $(SRC_DIR)/xchacha20.c $(SRC_DIR)/verbose.c $(SRC_DIR)/opts_utils.c $(SRC_DIR)/encrypt.c $(SRC_DIR)/decrypt.c $(SRC_DIR)/file_utils.c $(SRC_DIR)/random.c
+COMMON_SRC = $(SRC_DIR)/common_utils.c $(SRC_DIR)/convert_utils.c $(SRC_DIR)/input.c $(SRC_DIR)/sha256.c $(SRC_DIR)/xchacha20.c $(SRC_DIR)/verbose.c $(SRC_DIR)/opts_utils.c $(SRC_DIR)/encrypt.c $(SRC_DIR)/decrypt.c $(SRC_DIR)/file_utils.c $(SRC_DIR)/random.c
 TOOL_SRC = $(SRC_DIR)/main.c
 LUA_SRC = $(SRC_DIR)/lua_binding.c
 
@@ -46,7 +47,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 lua: $(LUA_MODULE_PATH)
 
 $(LUA_MODULE_PATH): $(LUA_SRC) $(COMMON_SRC)
-	$(CC) $(CFLAGS) -fPIC -shared -I$(LUAJIT_INC) -L$(LUAJIT_LIB) -lluajit-5.1 -o $@ $^
+	$(CC) $(CFLAGS) -fPIC -shared $(LUAJIT_INCLUDE) $(LUAJIT_LIB) -o $@ $^
 
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR) output.file

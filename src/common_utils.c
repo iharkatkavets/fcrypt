@@ -3,7 +3,7 @@
 #include "common_utils.h"
 
 #include "file_utils.h"
-#include "input_utils.h"
+#include "input.h"
 #include "sha256.h"
 #include "convert_utils.h"
 #include "random.h"
