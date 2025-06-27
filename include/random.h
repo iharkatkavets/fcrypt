@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-size_t gen_secure_bytes(uint8_t *buf, size_t len);
-size_t gen_uint16(uint16_t *padsize);
+size_t fcrypt_gen_bytes(uint8_t *buf, size_t len);
+size_t fcrypt_gen_uint16(uint16_t *padsize);
 
 #endif

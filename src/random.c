@@ -1,7 +1,8 @@
 /* gen_utils.c */
 
-#include "gen_utils.h"
+#include "random.h"
 #include "core_utils.h"
+#include "log_utils.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -15,15 +16,14 @@
 #include <termios.h>
 #include <stdbool.h>
 
-size_t gen_secure_bytes(uint8_t *buf, const size_t size) {
-  uint8_t *p;
+size_t fcrypt_gen_bytes(uint8_t *buf, const size_t size) {
+  uint8_t *p = buf;
   size_t remain = size;
 
-  p = buf;
   while (remain) {
     size_t chunk = MIN(remain, (size_t)256);
     if (getentropy(p, chunk)<0) {
-      perror("Failed to generate random data.\n");
+      LOG_ERR("Failed to generate random data.\n");
       return remain;
     }
     p += chunk;
@@ -33,10 +33,10 @@ size_t gen_secure_bytes(uint8_t *buf, const size_t size) {
   return remain;
 }
 
-size_t gen_uint16(uint16_t *result) {
+size_t fcrypt_gen_uint16(uint16_t *result) {
   uint8_t padsize_buf[2];
 
-  if (gen_secure_bytes(padsize_buf, 2)) {
+  if (fcrypt_gen_bytes(padsize_buf, 2)) {
     return EXIT_FAILURE;
   }
 

@@ -3,10 +3,10 @@
 #include "common_utils.h"
 
 #include "file_utils.h"
-#include "io_utils.h"
+#include "input.h"
 #include "sha256.h"
 #include "convert_utils.h"
-#include "verbose.h"
+#include "random.h"
 
 #include <fcntl.h>
 #include <errno.h>
@@ -16,78 +16,16 @@
 #include <string.h>
 
 
-ssize_t write_bytes(int outfd, const uint8_t *buf, ssize_t count) {
-  ssize_t chunk_written, total_written = 0;
-
-  while (total_written < count) {
-    chunk_written = write(outfd, buf + total_written, count - total_written);
-    if (chunk_written < 0) {
-      if (errno == EINTR) {
-        continue; 
-      }
-      return -1;
-    }
-    if (chunk_written == 0) {
-      return -1;
-    }
-    total_written += chunk_written;
-  }
-
-  return total_written;
-}
-
-int write_le16(int outfd, uint16_t value) {
-  uint8_t buf[2];
-  buf[0] = value & 0xFF;        // low byte
-  buf[1] = (value >> 8) & 0xFF; // high byte
-
-  return write(outfd, buf, 2) == 2 ? 2 : -1;
-}
-
-int read_le16(int infd, uint16_t *value) {
-  uint8_t buf[2];
-  ssize_t read_len = read(infd, buf, 2);
-  if (read_len != 2) 
-    return -1;
-  *value = (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
-  return 0;
-}
-
-int create_input_fd(options opts, int *infd) {
-  if ((*infd = open(opts.input_file, O_RDONLY)) < 0) {
-    fprintf(stderr, "Can't open '%s' file for reading.\n", opts.input_file);
+int fcrypt_check_file_absent(const char *output_file) {
+  if (output_file && file_exist(output_file)) {
+    fprintf(stderr, "Output file '%s' exists.\n", output_file);
     return EXIT_FAILURE;
   } else {
     return EXIT_SUCCESS;
   }
 }
 
-int check_output_file_absent(options opts) {
-  if (opts.output_file && file_exist(opts.output_file)) {
-    fprintf(stderr, "Output file '%s' exists.\n", opts.output_file);
-    return EXIT_FAILURE;
-  } else {
-    return EXIT_SUCCESS;
-  }
-}
-
-
-int create_output_fd(options opts, int *outfd) {
-  if (!opts.output_file) {
-    *outfd = STDOUT_FILENO;
-    return 0;
-  }
-
-  if ((*outfd = open(opts.output_file, O_WRONLY|O_CREAT|O_TRUNC, 00600)) == -1) {
-    fprintf(stderr, "Can't open '%s' file for writing.\n", opts.output_file);
-    return EXIT_FAILURE;
-  } else {
-    return EXIT_SUCCESS;
-  }
-}
-
-
-int setup_enc_key(uint8_t **key_hash32, options opts) {
+int fcrypt_resolve_encryption_key(uint8_t hash_out[32], options opts) {
   uint8_t *key1;
   size_t keysize1;
 
@@ -97,14 +35,14 @@ int setup_enc_key(uint8_t **key_hash32, options opts) {
     memcpy(key1, opts.password, keysize1);
   } else {
     key1 = malloc(256);
-    keysize1 = read_input_safe("Enter password: ", key1, 256);
+    keysize1 = fcrypt_read_password("Enter password: ", key1, 256);
     if (!keysize1) {
       free(key1);
       fprintf(stderr, "\nAbort\n");
       return EXIT_FAILURE;
     } 
     uint8_t *key2 = malloc(256);
-    size_t keysize2 = read_input_safe("\nVerify password: ", key2, 256);
+    size_t keysize2 = fcrypt_read_password("\nVerify password: ", key2, 256);
     if (!keysize2) {
       free(key1); free(key2);
       fprintf(stderr, "\nAbort\n");
@@ -118,7 +56,8 @@ int setup_enc_key(uint8_t **key_hash32, options opts) {
     free(key2);
   }
 
-  create_password_hash(key_hash32, key1, keysize1);
+  uint8_t *hash = fcrypt_compute_password_hash(key1, keysize1);
+  memcpy(hash_out, hash, 32);
   memset(key1, 0, keysize1);
   free(key1);
 
@@ -126,9 +65,9 @@ int setup_enc_key(uint8_t **key_hash32, options opts) {
 }
 
 
-int setup_dec_key(uint8_t **key_hash32, options opts) {
-  uint8_t *key1;
-  size_t keysize1;
+int fcrypt_resolve_decryption_key(uint8_t hash_out[32], options opts) {
+  uint8_t *key1 = NULL;
+  size_t keysize1 = 0;
 
   if (opts.password) {
     keysize1 = strlen(opts.password);
@@ -136,7 +75,7 @@ int setup_dec_key(uint8_t **key_hash32, options opts) {
     memcpy(key1, opts.password, keysize1);
   } else {
     key1 = malloc(256);
-    keysize1 = read_input_safe("Enter password: ", key1, 256);
+    keysize1 = fcrypt_read_password("Enter password: ", key1, 256);
     if (!keysize1) {
       free(key1);
       fprintf(stderr, "\nAbort\n");
@@ -145,7 +84,8 @@ int setup_dec_key(uint8_t **key_hash32, options opts) {
     fprintf(stderr, "\n");
   }
 
-  create_password_hash(key_hash32, key1, keysize1);
+  uint8_t *hash = fcrypt_compute_password_hash(key1, keysize1);
+  memcpy(hash_out, hash, 32);
   memset(key1, 0, keysize1);
   free(key1);
 
@@ -153,15 +93,13 @@ int setup_dec_key(uint8_t **key_hash32, options opts) {
 }
 
 
-void create_password_hash(uint8_t **key_hash32, uint8_t *key, size_t keysize) {
-  char key_hash_str[32*2+1];
-  *key_hash32 = sha256_data(key, keysize);
-  uint8_to_hex(key_hash_str, *key_hash32, 32);
-  vlog("SHA256(key): %s\n", key_hash_str);
+uint8_t *fcrypt_compute_password_hash(uint8_t *key, size_t keysize) {
+  uint8_t *hash = sha256_data(key, keysize);
+  return hash;
 }
 
 
-int resolve_hint(uint8_t **hint_out, size_t *hint_len_out, options opts) {
+int fcrypt_resolve_hint(uint8_t **hint_out, size_t *hint_len_out, options opts) {
   if (opts.hint) {
     *hint_len_out = strlen(opts.hint);
     *hint_out = malloc(*hint_len_out);
@@ -172,7 +110,7 @@ int resolve_hint(uint8_t **hint_out, size_t *hint_len_out, options opts) {
     uint8_t *hint = malloc(256);
     if (!hint) return EXIT_FAILURE;
 
-    hintsize = read_input("\nEnter password hint: ", hint, 256);
+    hintsize = fcrypt_read_str("\nEnter password hint: ", hint, 256);
     if (!hintsize) {
       *hint_out = NULL;
       *hint_len_out = 0;
@@ -194,9 +132,28 @@ int resolve_hint(uint8_t **hint_out, size_t *hint_len_out, options opts) {
   return EXIT_SUCCESS;
 }
 
-ssize_t read_bytes(int infd, uint8_t *buf, ssize_t count) {
-  ssize_t read_len = read(infd, buf, count);
-  if (read_len != count) 
-    return -1;
-  return count;
+size_t fcrypt_gen_nonce(uint8_t *buf, size_t size) {
+  char nonce24_str[size*2+1];
+  size_t result; 
+
+  if (!(result = fcrypt_gen_bytes(buf, size))) {
+  //   bytes_to_hexstr(nonce24_str, buf, size);
+  //   vlog("Nonce[24]: %s\n", nonce24_str);
+  }
+  return result;
 }
+
+
+int fcrypt_gen_pad_size(uint16_t *padsize, options opts) {
+  if (opts.padsize != -1) {
+    *padsize = (uint16_t)opts.padsize;
+    return EXIT_SUCCESS;
+  }
+
+  if(fcrypt_gen_uint16(padsize)) {
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+

@@ -1,7 +1,7 @@
 /* main.c */
 
-#include "decryptor.h"
-#include "encryptor.h"
+#include "decrypt.h"
+#include "encrypt.h"
 #include "opts_utils.h"
 
 #include <stdlib.h>
@@ -26,10 +26,10 @@ int main(int argc, char *argv[]) {
   }
 
   if (opts.decrypt) {
-    return decryptor(opts);
+    return fcrypt_decrypt_from_opts(opts);
   }
   else if (opts.encrypt) {
-    return encryptor(opts);
+    return fcrypt_encrypt_from_opts(opts);
   }
 
   print_usage(argv[0]);
