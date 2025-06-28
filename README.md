@@ -1,6 +1,6 @@
 # fcrypt
 
-A command-line tool for encrypting and decrypting files using the XChaCha20 algorithm.
+A command-line tool for encrypting files using the XChaCha20 algorithm.
 
 ## Supported platforms
 
@@ -15,8 +15,9 @@ At the moment it supports macOS only
 ## How to decrypt the file
 
 ```bash
-./bin/fcrypt -d encrypted.file -o decrypted.file
 ./bin/fcrypt -d encrypted.file
+# or
+./bin/fcrypt -d encrypted.file -o decrypted.file
 ```
 
 ## Arguments and Parameters
@@ -68,9 +69,9 @@ At the moment it supports macOS only
 ## How to compile the project
 
 ```bash
-git clone https://github.com/iharkatkavets/secure-encryptor.git && cd secure-encryptor
-make all
-# Binary files located in bin dir
+git clone https://github.com/iharkatkavets/fcrypt.git && cd fcrypt
+make fcrypt
+# Binary file located in bin dir
 ls ./bin
 ```
 
@@ -87,13 +88,19 @@ All content except HINT_LEN, PASSWORD HINT, NONCE is encrypted using XChaCha20 a
 | 2 bytes | 2 bytes  | HINT_LEN bytes |   24 bytes    |  2 bytes  | PAD_SIZE bytes | 32 bytes  | ...       |
 +---------+----------+----------------+---------------+-----------+----------------+-----------+-----------+
 | FORMAT  | HINT_LEN | NON ENCRYPTED  | NON ENCRYPTED | RANDOM    |  ENCRYPTED     | ENCRYPTED | ENCRYPTED |
-| VERSION |          | PASSWORD HINT  | NONCE (IV)    | ENCRYPTED |  PADDING       | KEY HASH  | SRC FILE  |   
+| VERSION |    LE    | PASSWORD HINT  | NONCE (IV)    | ENCRYPTED |  PADDING       | KEY HASH  | SRC FILE  |   
 |   LE    |          |                |               | PAD_SIZE  |  BYTES         | (SHA256)  |           |
 +---------+----------+----------------+---------------+-----------+----------------+-----------+-----------+
 ```
 
-**FORMAT_VERSION (2 bytes, little endian):**
+**FORMAT_VERSION (2 bytes, little endian):**  
 • Stores version of the format used
+
+**HINT_LEN (2 bytes):**  
+• The len of the following `NON ENCRYPTED PASSWORD HINT`
+
+**PASSWORD_HINT (HINT_LEN bytes):**  
+• Stores the password hint.  
 
 **NON_ENCRYPTED_NONCE (24 bytes):**  
 • Stores the 192-bit nonce.  
@@ -101,7 +108,7 @@ All content except HINT_LEN, PASSWORD HINT, NONCE is encrypted using XChaCha20 a
 key. It is non-sensitive and can be safely stored without encryption.
 
 **ENCRYPTED_PAD_SIZE (2 bytes):**  
-• Contains the size of random padding bytes in the file, encrypted to hide
+• Contains the size of the following padding bytes in the file, encrypted to hide
 potential file structure hints.  
 • 2 bytes (16 bits) allow for a maximum pad size of 65,535 bytes, which should
 be sufficient.
