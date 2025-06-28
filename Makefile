@@ -38,6 +38,8 @@ $(shell mkdir -p $(BUILD_DIR) $(BIN_DIR))
 
 all: $(TOOL_PATH) $(LUA_MODULE_PATH)
 
+$(TOOL): $(TOOL_PATH)
+
 $(TOOL_PATH): $(TOOL_OBJ) $(COMMON_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
