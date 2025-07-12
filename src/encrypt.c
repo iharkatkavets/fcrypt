@@ -52,7 +52,7 @@ int fcrypt_encrypt_buf(
     return EXIT_FAILURE;
   }
   bytes_to_hexstr(nonce24_str, nonce24, 24);
-  vlog("Nonce[24]: %s\n", nonce24_str);
+  VERBOSE("Nonce[24]: %s\n", nonce24_str);
 
 #define CHECK_WRITE(N) \
     do { \
@@ -68,7 +68,7 @@ int fcrypt_encrypt_buf(
 
   key_hash32 = fcrypt_compute_password_hash(key, key_len);
   bytes_to_hexstr(key_hash_str, key_hash32, 32);
-  vlog("SHA256(key): %s\n", key_hash_str);
+  VERBOSE("SHA256(key): %s\n", key_hash_str);
 
   xchacha_keysetup(&ctx, key_hash32, nonce24);
   xchacha_set_counter(&ctx, counter);
@@ -152,7 +152,7 @@ int fcrypt_encrypt_file(
     LOG_ERR("Fail to generate pad size.\n");
     return EXIT_FAILURE;
   }
-  vlog("Padsize: %u\n", padsize);
+  VERBOSE("Padsize: %u\n", padsize);
 
   xchacha_keysetup(&ctx, key_hash32, nonce24);
   xchacha_set_counter(&ctx, counter);
@@ -216,7 +216,7 @@ int fcrypt_encrypt_from_opts(options opts) {
     return EXIT_FAILURE;
   }
 
-  if (fcrypt_check_file_absent(opts.output_file)) {
+  if (opts.output_file && file_exist(opts.output_file)) {
     close(infd);
     return EXIT_FAILURE;
   }

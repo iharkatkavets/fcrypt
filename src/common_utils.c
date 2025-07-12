@@ -16,9 +16,8 @@
 #include <string.h>
 
 
-int fcrypt_check_file_absent(const char *output_file) {
+bool fcrypt_check_file_exists(const char *output_file) {
   if (output_file && file_exist(output_file)) {
-    fprintf(stderr, "Output file '%s' exists.\n", output_file);
     return EXIT_FAILURE;
   } else {
     return EXIT_SUCCESS;

@@ -6,9 +6,9 @@ LUAJIT_LIB ?= $(shell pkg-config --libs luajit)
 CC = gcc
 
 ifeq ($(BUILD), debug)
-	CFLAGS = -Iinclude -Wall -Wextra -g -DDEBUG
+	CFLAGS = -Iinclude -Wall -Wextra -g0 -DDEBUG
 else ifeq ($(BUILD), release)
-	CFLAGS = -Iinclude -Wall -Wextra -O2
+	CFLAGS = -Iinclude -Wall -Wextra -g0 -O2
 else
     $(error Unknown build type "$(BUILD)". Use "debug" or "release".)
 endif
@@ -18,6 +18,8 @@ TEST_DIR := test
 INCLUDE_DIR = include
 BUILD_DIR = build
 BIN_DIR = bin
+LOG_DIR := test_logs
+TEST_LOGS_DIR := $(patsubst %, $(LOG_DIR)/%.log, $(notdir $(TEST_BINS)))
 
 COMMON_SRC = $(SRC_DIR)/common_utils.c $(SRC_DIR)/convert_utils.c $(SRC_DIR)/input.c $(SRC_DIR)/sha256.c $(SRC_DIR)/xchacha20.c $(SRC_DIR)/verbose.c $(SRC_DIR)/opts_utils.c $(SRC_DIR)/encrypt.c $(SRC_DIR)/decrypt.c $(SRC_DIR)/file_utils.c $(SRC_DIR)/random.c
 TOOL_SRC = $(SRC_DIR)/main.c
@@ -36,6 +38,12 @@ LUA_MODULE_PATH = $(BIN_DIR)/$(LUA_MODULE)
 
 $(shell mkdir -p $(BUILD_DIR) $(BIN_DIR))
 
+check_luajit:
+	@if ! pkg-config --exists luajit; then \
+		echo "LuaJIT development files not found. Please install luajit."; \
+		exit 1; \
+		fi
+
 all: $(TOOL_PATH) $(LUA_MODULE_PATH)
 
 $(TOOL): $(TOOL_PATH)
@@ -48,11 +56,11 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 
 lua: $(LUA_MODULE_PATH)
 
-$(LUA_MODULE_PATH): $(LUA_SRC) $(COMMON_SRC)
+$(LUA_MODULE_PATH): check_luajit $(LUA_SRC) $(COMMON_SRC)
 	$(CC) $(CFLAGS) -fPIC -shared $(LUAJIT_INCLUDE) $(LUAJIT_LIB) -o $@ $^
 
 clean:
-	rm -rf $(BUILD_DIR) $(BIN_DIR) output.file
+	rm -rf $(BUILD_DIR) $(BIN_DIR) $(TEST_LOGS_DIR)
 
 debug:
 	$(MAKE) BUILD=debug
@@ -64,6 +72,17 @@ $(BUILD_DIR)/test_%: $(TEST_DIR)/test_%.c $(COMMON_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
 test: $(TEST_BINS)
-	@for bin in $(TEST_BINS); do echo "Running $$bin..."; $$bin || exit 1; done
+	@mkdir -p $(LOG_DIR)
+	@for bin in $(TEST_BINS); do \
+		log="$(LOG_DIR)/$$(basename $$bin).log"; \
+		printf "Running $$bin... "; \
+		if $$bin > "$$log" 2>&1; then \
+			echo " OK"; \
+		else \
+			echo " FAIL (see $$log)"; \
+			tail -n 10 "$$log"; \
+			exit 1; \
+		fi \
+	done
 
 .PHONY: all clean lua test
